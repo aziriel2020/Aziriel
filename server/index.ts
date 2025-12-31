@@ -1,15 +1,17 @@
 /**
- * NEURAFIELD QUANTUM v5.0 - Express Server
- * Complete backend with all API endpoints and Socket.IO
+ * NEURAFIELD QUANTUM v5.0 - Production Express Server
+ * Complete backend with all API endpoints, Socket.IO, and production features
  */
 
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import cors from 'cors';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
 
 // Import shared modules
 import { getAllProviders, getProviderById, getProvidersByCategory, getTotalStats } from '../shared/ai-providers-registry';
@@ -18,25 +20,72 @@ import { shotTypes, cameraMovements, transitions, vfxCategories, physicsInteract
 import { iconicScenes, directorStyles, narrativeStructures, advancedFeatures } from '../shared/cinematix-extended';
 import { getAllModes, getModeById, getModesByCategory, getTotalModeStats } from '../shared/generation-modes';
 
+// Import middleware
+import { helmetMiddleware, corsMiddleware, apiLimiter, sanitizeInput } from './middleware/security.middleware';
+import { authenticate, optionalAuth } from './middleware/auth.middleware';
+
+// Import services
+import { initSentry, sentryRequestHandler, sentryTracingHandler, sentryErrorHandler, MonitoringService } from './services/monitoring.service';
+import logger, { requestLogger } from './services/logger.service';
+import { EmailService } from './services/email.service';
+
+// Import routes
+import socialRoutes from './routes/social.routes';
+import adminRoutes from './routes/admin.routes';
+
+// Import config
+import { swaggerSpec } from './config/swagger';
+
 dotenv.config();
 
 const app = express();
+
+// Initialize Sentry (must be first)
+initSentry(app);
+
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    methods: ['GET', 'POST']
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:5173'],
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*'
-}));
-app.use(express.json());
+// ==================== MIDDLEWARE ====================
+
+// Sentry request handling
+app.use(sentryRequestHandler());
+app.use(sentryTracingHandler());
+
+// Security middleware
+app.use(helmetMiddleware);
+app.use(corsMiddleware);
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Compression
+app.use(compression());
+
+// Sanitize inputs
+app.use(sanitizeInput);
+
+// Request logging
+app.use(requestLogger);
+
+// Static files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// API Documentation
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'NEURAFIELD QUANTUM API Docs'
+}));
 
 // In-memory storage (in production, use a real database)
 const jobs = new Map<string, any>();
@@ -111,17 +160,119 @@ const appMarketplace = {
   ]
 };
 
-// ==================== HEALTH & STATS ====================
+// ==================== HEALTH & MONITORING ====================
 
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: '5.0.0',
-    platform: 'NEURAFIELD QUANTUM',
-    uptime: process.uptime()
-  });
+app.get('/api/health', async (req: Request, res: Response) => {
+  try {
+    const health = await MonitoringService.healthCheck();
+    const metrics = await MonitoringService.getSystemMetrics();
+
+    res.json({
+      status: health.status,
+      timestamp: health.timestamp,
+      version: '5.0.0',
+      platform: 'NEURAFIELD QUANTUM',
+      uptime: metrics.uptime,
+      services: health.services,
+      memory: metrics.memory
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
 });
+
+// ==================== AUTHENTICATION ROUTES ====================
+
+import { AuthService } from './services/auth.service';
+import { authLimiter, registerValidation, loginValidation, validateRequest } from './middleware/security.middleware';
+
+app.post('/api/auth/register', authLimiter, registerValidation, validateRequest, async (req: Request, res: Response) => {
+  try {
+    const { email, password, name } = req.body;
+    const result = await AuthService.register(email, password, name);
+
+    // Send welcome email
+    try {
+      await EmailService.sendWelcomeEmail(email, name || email, 100);
+    } catch (emailError) {
+      logger.error('Failed to send welcome email', { error: emailError });
+    }
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    logger.error('Registration error', { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/login', authLimiter, loginValidation, validateRequest, async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const result = await AuthService.login(email, password);
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Login error', { error: error.message });
+    res.status(401).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/refresh', async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    const result = await AuthService.refreshToken(refreshToken);
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(401).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/logout', authenticate, async (req: any, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    await AuthService.logout(refreshToken);
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/auth/me', authenticate, async (req: any, res: Response) => {
+  try {
+    const { prisma } = require('./config/database');
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        role: true,
+        plan: true,
+        credits: true,
+        avatarUrl: true,
+        createdAt: true
+      }
+    });
+
+    res.json(user);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== SOCIAL ROUTES ====================
+
+app.use('/api/social', apiLimiter, socialRoutes);
+
+// ==================== ADMIN ROUTES ====================
+
+app.use('/api/admin', apiLimiter, adminRoutes);
 
 app.get('/api/stats', (req: Request, res: Response) => {
   const providerStats = getTotalStats();
@@ -519,23 +670,107 @@ io.on('connection', (socket) => {
   });
 });
 
+// ==================== ERROR HANDLING ====================
+
+// Sentry error handler (must be before other error handlers)
+app.use(sentryErrorHandler());
+
+// 404 handler
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.path}`,
+    documentation: `${process.env.APP_URL || 'http://localhost:3000'}/api/docs`
+  });
+});
+
+// Global error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  logger.error('Unhandled error', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
+  MonitoringService.captureException(err, {
+    path: req.path,
+    method: req.method,
+    body: req.body
+  });
+
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
 // ==================== START SERVER ====================
 
-httpServer.listen(PORT, () => {
-  console.log(`
+async function startServer() {
+  try {
+    // Verify email configuration
+    await EmailService.verifyConnection();
+
+    // Start server
+    httpServer.listen(PORT, () => {
+      const stats = getTotalStats();
+      const modeStats = getTotalModeStats();
+      const appCount = Object.values(appMarketplace).reduce((sum, apps) => sum + apps.length, 0);
+
+      logger.info('Server started successfully', {
+        port: PORT,
+        env: process.env.NODE_ENV,
+        providers: stats.totalProviders,
+        models: stats.totalModels
+      });
+
+      console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║          NEURAFIELD QUANTUM v5.0                          ║
+║          NEURAFIELD QUANTUM v5.0 PRODUCTION               ║
 ║          The $10 Billion Reference Platform               ║
 ║                                                           ║
-║  🚀 Server running on http://localhost:${PORT}              ║
-║  📊 Provider Stats: ${getTotalStats().totalProviders}+ providers, ${getTotalStats().totalModels}+ models        ║
+║  🚀 Server: http://localhost:${PORT}                        ║
+║  📚 API Docs: http://localhost:${PORT}/api/docs             ║
+║  📊 Providers: ${stats.totalProviders}+ providers, ${stats.totalModels}+ models               ║
 ║  🎬 Cinematix: 12 Revolutionary Innovations               ║
-║  🎨 Generation Modes: ${getTotalModeStats().total}+ modes                    ║
-║  📱 Apps: ${Object.values(appMarketplace).reduce((sum, apps) => sum + apps.length, 0)}+ included apps                           ║
+║  🎨 Modes: ${modeStats.total}+ generation modes                      ║
+║  📱 Apps: ${appCount}+ included applications                    ║
+║  🔐 Auth: JWT + OAuth (Google, GitHub)                    ║
+║  💳 Payments: Stripe Integration                          ║
+║  📊 Analytics: Winston + Sentry                           ║
+║  💾 Database: PostgreSQL + Prisma                         ║
+║  🔄 Queue: Bull + Redis                                   ║
+║  ☁️  Storage: AWS S3                                       ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
-  `);
+      `);
+    });
+  } catch (error) {
+    logger.error('Failed to start server', { error });
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, closing server gracefully');
+  httpServer.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
 });
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, closing server gracefully');
+  httpServer.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
+
+// Start the server
+startServer();
 
 export default app;
