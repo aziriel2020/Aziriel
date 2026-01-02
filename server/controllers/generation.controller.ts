@@ -13,6 +13,15 @@ import { OpenAIService } from '../services/ai/openai.service';
 import { AnthropicService } from '../services/ai/anthropic.service';
 import { GoogleService } from '../services/ai/google.service';
 import { KlingService } from '../services/ai/kling.service';
+import { SoraService } from '../services/ai/sora.service';
+import { VeoService } from '../services/ai/veo.service';
+import { HunyuanService } from '../services/ai/hunyuan.service';
+import { WanService } from '../services/ai/wan.service';
+import { HailuoService } from '../services/ai/hailuo.service';
+import { LumaService } from '../services/ai/luma.service';
+import { PikaService } from '../services/ai/pika.service';
+import { MochiService } from '../services/ai/mochi.service';
+import { STARFlowService } from '../services/ai/starflow.service';
 import { io } from '../app';
 
 export class GenerationController {
@@ -521,17 +530,136 @@ export class GenerationController {
         { id: 'flux', name: 'Flux Schnell', provider: 'replicate' },
       ],
       video: [
+        // Western "Big Three"
+        {
+          id: 'sora-2',
+          name: 'OpenAI Sora 2 (Social Simulation Engine)',
+          provider: 'sora',
+          features: ['Character Cameos', 'Storyboards', 'Native Audio', 'Up to 25s', '1080p', 'Physics Simulation'],
+          description: 'Social platform for viral content, best physics-aware simulation',
+          elo: null,
+          release: '2025-09-30',
+        },
+        {
+          id: 'veo-3.1',
+          name: 'Google Veo 3.1 (Enterprise Integration)',
+          provider: 'veo',
+          features: ['Ingredient Control', 'Video Extension >60s', 'Masked Editing', 'Gemini Prompts', '4K', 'Fast Mode'],
+          description: 'Enterprise-grade with ecosystem integration, brand safety',
+          elo: null,
+          release: '2025-10-15',
+        },
+        {
+          id: 'runway-gen4.5',
+          name: 'Runway Gen-4.5 (Filmmaker Precision)',
+          provider: 'runway',
+          features: ['Advanced Camera Controls', 'Multi-Motion Brush', 'Character Reference', 'Physics Engine', '1080p'],
+          description: 'Professional VFX tool, highest Elo score (1247)',
+          elo: 1247,
+          release: '2025-12-01',
+        },
+        { id: 'runway-gen3', name: 'Runway Gen-3 Alpha', provider: 'runway', features: ['10s', '1080p'] },
+        { id: 'runway-gen2', name: 'Runway Gen-2', provider: 'runway', features: ['4s', '1080p'] },
+
+        // Chinese Innovation Leaders
+        {
+          id: 'hunyuan-1.5',
+          name: 'Tencent Hunyuan Video 1.5 (Open Source SOTA)',
+          provider: 'hunyuan',
+          features: ['8.3B params', 'Runs on RTX 4090', '4-step distilled', 'Super-res 1080p', 'Open Source'],
+          description: 'Efficient SOTA quality, runs on consumer hardware',
+          elo: null,
+          release: '2025-12-17',
+        },
+        {
+          id: 'hy-world-1.5',
+          name: 'HY-World 1.5 / WorldPlay (Interactive Real-Time)',
+          provider: 'hunyuan',
+          features: ['Real-time 24fps', 'WASD Control', 'Interactive World Model', 'Streaming Inference'],
+          description: 'Revolutionary: explore AI-generated worlds like a game',
+          elo: null,
+          release: '2025-12-17',
+        },
+        {
+          id: 'wan-2.2',
+          name: 'Alibaba Wan 2.2 (MoE Architecture)',
+          provider: 'wan',
+          features: ['14B MoE', 'Speech-to-Video', 'Runs on RTX 4090', 'Open Weights'],
+          description: 'Efficient scaling via sparsity, audio-reactive generation',
+          elo: null,
+          release: '2025-late',
+        },
         {
           id: 'kling-2.6',
-          name: 'Kling AI 2.6 (Best Quality)',
+          name: 'Kling AI 2.6 (Motion Specialist)',
           provider: 'kling',
-          features: ['Character consistency', 'Camera control', 'Up to 10s', '1080p'],
-          description: 'Superior motion quality and consistency'
+          features: ['Motion Transfer', 'Native Audio', 'Camera Control', 'Up to 10s', '1080p'],
+          description: 'Superior motion quality and consistency',
+          elo: null,
+          release: '2025-late',
         },
-        { id: 'runway-gen3', name: 'Runway Gen-3 Alpha', provider: 'runway' },
-        { id: 'runway-gen2', name: 'Runway Gen-2', provider: 'runway' },
-        { id: 'zeroscope', name: 'Zeroscope V2 XL', provider: 'replicate' },
-        { id: 'animatediff', name: 'AnimateDiff', provider: 'replicate' },
+        {
+          id: 'kling-o1',
+          name: 'Kling O1 (Reasoning Model)',
+          provider: 'kling',
+          features: ['Chain-of-Thought', 'Start+End Frame Logic', 'No Teleportation Errors', 'Pro Mode'],
+          description: 'Revolutionary: plans video sequence before generating',
+          elo: null,
+          release: '2025-late',
+        },
+        {
+          id: 'hailuo-2.3',
+          name: 'MiniMax Hailuo 2.3 (Speed Demon)',
+          provider: 'hailuo',
+          features: ['2-3x faster than Sora', '$0.045/sec', 'Media Agent', 'Anime/Stylized', '1080p 6s'],
+          description: 'Efficiency leader, optimized for stylized content',
+          elo: null,
+          release: '2025-11/12',
+        },
+
+        // Specialized Innovators
+        {
+          id: 'luma-ray3',
+          name: 'Luma Ray 3 (3D Native Editor)',
+          provider: 'luma',
+          features: ['Modify with Instructions', '3D Geometric Consistency', 'Reframe', 'Camera Concepts'],
+          description: 'Natural language editing, NeRF-based 3D understanding',
+          elo: null,
+          release: '2025-12-18',
+        },
+        {
+          id: 'pika-2.2',
+          name: 'Pika Art 2.2 (Creative Playground)',
+          provider: 'pika',
+          features: ['Pikaffects (Melt/Crush/Inflate)', 'Pikaframes', 'Lip Sync', 'Character Performance'],
+          description: 'Surreal effects, meme-centric, social-first',
+          elo: null,
+          release: '2025-current',
+        },
+        {
+          id: 'mochi-1',
+          name: 'Genmo Mochi 1 (Open Source Pioneer)',
+          provider: 'mochi',
+          features: ['Apache 2.0 License', 'AsymmDiT Architecture', 'Superior Prompt Adherence', 'Research-friendly'],
+          description: 'First SOTA open model, unrestricted commercial use',
+          elo: null,
+          release: '2025-09',
+        },
+
+        // Research Frontier
+        {
+          id: 'starflow-v',
+          name: 'Apple STARFlow-V (Normalizing Flows)',
+          provider: 'starflow',
+          features: ['15x Faster', '1-4 Step Generation', 'On-device Potential', '480p'],
+          description: 'Revolutionary architecture, extreme speed, iOS future',
+          elo: null,
+          release: '2025-12 (Research)',
+        },
+
+        // Legacy models
+        { id: 'zeroscope', name: 'Zeroscope V2 XL', provider: 'replicate', features: ['3s', '576x320'] },
+        { id: 'animatediff', name: 'AnimateDiff', provider: 'replicate', features: ['Animation', '512x512'] },
       ],
       audio: [
         { id: 'musicgen', name: 'MusicGen', provider: 'replicate' },

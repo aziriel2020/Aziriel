@@ -59,22 +59,71 @@ export const schemas = {
     body: z.object({
       prompt: z.string().min(1, 'Prompt is required'),
       provider: z.enum([
-        'kling',
-        'kling-2.6',
-        'runway',
-        'runway-gen2',
-        'runway-gen3',
+        // Western Big Three
+        'sora', 'sora-2',
+        'veo', 'veo-3.1',
+        'runway', 'runway-gen2', 'runway-gen3', 'runway-gen4', 'runway-gen4.5',
+        // Chinese Leaders
+        'hunyuan', 'hunyuan-1.5', 'hy-world', 'hy-world-1.5',
+        'wan', 'wan-2.2',
+        'kling', 'kling-2.6', 'kling-o1',
+        'hailuo', 'hailuo-2.3',
+        // Specialized
+        'luma', 'luma-ray3',
+        'pika', 'pika-2.2',
+        'mochi', 'mochi-1',
+        'starflow', 'starflow-v',
+        // Legacy
         'replicate-zeroscope',
         'replicate-animatediff'
       ]),
       options: z.object({
-        duration: z.number().min(1).max(30).optional(),
-        resolution: z.enum(['720p', '1080p', '4k']).optional(),
+        // Common options
+        duration: z.number().min(1).max(60).optional(),
+        resolution: z.enum(['480p', '720p', '1080p', '4k']).optional(),
         fps: z.number().min(15).max(60).optional(),
-        mode: z.enum(['standard', 'pro']).optional(), // For Kling
-        aspectRatio: z.enum(['16:9', '9:16', '1:1']).optional(), // For Kling
-        negativePrompt: z.string().optional(),
         seed: z.number().optional(),
+
+        // Kling & Hailuo
+        mode: z.enum(['standard', 'pro']).optional(),
+        aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3', '21:9']).optional(),
+        negativePrompt: z.string().optional(),
+        cfg: z.number().min(0).max(20).optional(),
+
+        // Kling O1
+        startFrame: z.string().optional(),
+        endFrame: z.string().optional(),
+        reasoningDepth: z.enum(['fast', 'medium', 'deep']).optional(),
+
+        // Sora
+        style: z.string().optional(),
+        characterCameos: z.array(z.string()).optional(),
+        withAudio: z.boolean().optional(),
+
+        // Veo
+        quality: z.enum(['fast', 'high']).optional(),
+        enhancePrompt: z.boolean().optional(),
+
+        // Runway Gen-4.5
+        cameraControl: z.object({
+          type: z.enum(['truck', 'dolly', 'pan', 'roll', 'tilt', 'boom', 'static']).optional(),
+          intensity: z.number().min(0).max(10).optional(),
+          direction: z.string().optional(),
+          speed: z.enum(['slow', 'medium', 'fast']).optional(),
+        }).optional(),
+        characterReference: z.string().optional(),
+        physicsMode: z.enum(['realistic', 'cinematic']).optional(),
+
+        // Hunyuan
+        inferenceSteps: z.number().min(4).max(100).optional(),
+        useLocal: z.boolean().optional(),
+
+        // Luma
+        cameraAngle: z.enum(['low', 'high', 'dutch', 'eye-level', 'birds-eye', 'worms-eye']).optional(),
+        cameraMovement: z.enum(['static', 'pan', 'tilt', 'dolly', 'orbit', 'crane']).optional(),
+
+        // STARFlow
+        flowSteps: z.number().min(1).max(4).optional(),
       }).optional(),
     }),
   }),

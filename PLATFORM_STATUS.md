@@ -74,17 +74,77 @@
 ✅ **Video inpainting**
 ✅ Task polling with progress tracking
 
-### **Kling AI 2.6**
+### **Kling AI 2.6 & O1**
 ✅ **Text-to-video (up to 10s, 1080p)**
 ✅ **Image-to-video with camera motion control**
 ✅ **Video-to-video transformation**
 ✅ **Video extension (seamless)**
 ✅ **Character consistency mode**
+✅ **Motion transfer (reference video → target image)**
+✅ **Kling O1 reasoning model (chain-of-thought planning)**
 ✅ **Advanced camera controls (pan, zoom, tilt, dolly)**
 ✅ **Standard & Pro quality modes**
-✅ **Aspect ratio control (16:9, 9:16, 1:1)**
-✅ **CFG scale & negative prompts**
-✅ **Quota/credits tracking**
+
+### **OpenAI Sora 2 (Social Simulation Engine)**
+✅ **Physics-aware 3D world simulation**
+✅ **Native audio synthesis (dialogue, foley, ambient)**
+✅ **Character Cameos (persistent characters)**
+✅ **Storyboards (frame-by-frame direction)**
+✅ **Video Styles (12+ preset aesthetics)**
+✅ **Stitching & Remixing**
+✅ **Up to 25s duration, 1080p**
+
+### **Google Veo 3.1 (Enterprise Integration)**
+✅ **Ingredient-based control (up to 3 references)**
+✅ **Video extension (>60s via chaining)**
+✅ **Masked editing**
+✅ **Prompt enhancement via Gemini 2.5 Flash**
+✅ **Fast & High Quality variants**
+✅ **Up to 4K resolution**
+
+### **Runway Gen-4.5 (1247 Elo Leader)**
+✅ **Advanced camera controls (Truck, Dolly, Pan, Roll, Tilt, Boom)**
+✅ **Multi-Motion Brush**
+✅ **Character Reference**
+✅ **Physics-aware generation**
+✅ **Audio generation tools**
+
+### **Tencent Hunyuan 1.5 & HY-World (Open Source)**
+✅ **8.3B efficient model (RTX 4090)**
+✅ **4-step distilled version**
+✅ **HY-World: Real-time interactive worlds**
+✅ **WASD camera control, 24fps streaming**
+
+### **Alibaba Wan 2.2 (MoE Architecture)**
+✅ **14B Mixture-of-Experts**
+✅ **Speech-to-Video (S2V) module**
+✅ **Lip-synced animation**
+✅ **Audio-reactive environments**
+
+### **MiniMax Hailuo 2.3 (Speed Demon)**
+✅ **2-3x faster than Sora**
+✅ **Media Agent (intelligent routing)**
+✅ **Anime/stylized content specialist**
+
+### **Luma Ray 3 (3D Native)**
+✅ **Modify with Instructions**
+✅ **3D geometric consistency**
+✅ **Reframe & Camera Concepts**
+
+### **Pika Art 2.2 (Creative Playground)**
+✅ **Pikaffects (8 surreal effects)**
+✅ **Pikaframes**
+✅ **Lip Sync**
+
+### **Genmo Mochi 1 (Open Source Pioneer)**
+✅ **Apache 2.0 license**
+✅ **AsymmDiT architecture**
+✅ **Superior prompt adherence**
+
+### **Apple STARFlow-V (Research)**
+✅ **15x faster (Normalizing Flows)**
+✅ **1-4 step generation**
+⚠️ **Research phase (480p)**
 
 ---
 
@@ -320,13 +380,13 @@ http://localhost:5000/api
 
 ## 📈 CODE STATISTICS
 
-**Total Files:** 37 production files
-**Total Lines:** ~10,400 lines of TypeScript
-**Services:** 21 production services
+**Total Files:** 46 production files
+**Total Lines:** ~16,000+ lines of TypeScript
+**Services:** 30 production services
 **Controllers:** 6 complete controllers
 **Routes:** 6 route modules
 **Middleware:** 4 middleware modules
-**Real AI Integrations:** 6 providers, 16+ models
+**Real AI Integrations:** 15 providers, 30+ models
 **Database Models:** User, Project, Job, Asset, Session, Transaction
 **API Endpoints:** 44+ RESTful endpoints
 **WebSocket Events:** 5 real-time events

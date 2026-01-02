@@ -362,6 +362,122 @@ export class KlingService {
   }
 
   /**
+   * Kling O1 - Reasoning Model for Video (Revolutionary!)
+   * Uses chain-of-thought process to plan video sequence
+   * Superior Start + End Frame transitions without "teleportation" errors
+   */
+  static async generateWithO1(
+    jobId: string,
+    startFrame: string, // Image URL for start state
+    endFrame: string, // Image URL for end state
+    prompt: string,
+    options?: {
+      duration?: 5 | 10;
+      mode?: 'standard' | 'pro';
+      reasoningDepth?: 'fast' | 'medium' | 'deep'; // How much planning
+      showReasoning?: boolean; // Return intermediate reasoning steps
+    }
+  ): Promise<{
+    videoUrl: string;
+    reasoning?: Array<{ step: number; thought: string; action: string }>;
+  }> {
+    try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 5 },
+      });
+
+      const response = await this.api.post('/videos/o1-generate', {
+        model: 'kling-o1',
+        start_frame: startFrame,
+        end_frame: endFrame,
+        prompt,
+        duration: options?.duration || 10,
+        mode: options?.mode || 'pro', // O1 works best in Pro
+        reasoning_depth: options?.reasoningDepth || 'medium',
+        return_reasoning: options?.showReasoning || false,
+      });
+
+      const taskId = response.data.task_id;
+      const videoUrl = await this.pollTask(taskId, jobId);
+
+      // Get reasoning if requested
+      let reasoning;
+      if (options?.showReasoning) {
+        const reasoningResponse = await this.api.get(`/tasks/${taskId}/reasoning`);
+        reasoning = reasoningResponse.data.reasoning_steps;
+      }
+
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          progress: 100,
+          outputUrl: videoUrl,
+          completedAt: new Date(),
+        },
+      });
+
+      return {
+        videoUrl,
+        reasoning,
+      };
+    } catch (error: any) {
+      logger.error('Kling O1 generation failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Motion transfer - Transfer motion from reference video to target image
+   * Kling 2.6 feature released months before Western competitors
+   */
+  static async motionTransfer(
+    jobId: string,
+    targetImage: string, // Image to animate
+    referenceVideo: string, // Video whose motion to copy
+    options?: {
+      motionStrength?: number; // 0-1, how much motion to transfer
+      preserveCharacter?: boolean; // Keep target image character
+      duration?: 5 | 10;
+    }
+  ): Promise<string> {
+    try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 5 },
+      });
+
+      const response = await this.api.post('/videos/motion-transfer', {
+        model: 'kling-v2.6',
+        target_image: targetImage,
+        reference_video: referenceVideo,
+        motion_strength: options?.motionStrength || 0.8,
+        preserve_character: options?.preserveCharacter !== false,
+        duration: options?.duration || 5,
+      });
+
+      const taskId = response.data.task_id;
+      const videoUrl = await this.pollTask(taskId, jobId);
+
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          progress: 100,
+          outputUrl: videoUrl,
+          completedAt: new Date(),
+        },
+      });
+
+      return videoUrl;
+    } catch (error: any) {
+      logger.error('Kling motion transfer failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
    * Cancel a running task
    */
   static async cancelTask(taskId: string): Promise<void> {

@@ -12,6 +12,15 @@ import { OpenAIService } from './ai/openai.service';
 import { AnthropicService } from './ai/anthropic.service';
 import { GoogleService } from './ai/google.service';
 import { KlingService } from './ai/kling.service';
+import { SoraService } from './ai/sora.service';
+import { VeoService } from './ai/veo.service';
+import { HunyuanService } from './ai/hunyuan.service';
+import { WanService } from './ai/wan.service';
+import { HailuoService } from './ai/hailuo.service';
+import { LumaService } from './ai/luma.service';
+import { PikaService } from './ai/pika.service';
+import { MochiService } from './ai/mochi.service';
+import { STARFlowService } from './ai/starflow.service';
 import { VideoService } from './video.service';
 
 // Create queues for different job types
@@ -80,9 +89,15 @@ videoGenerationQueue.process(async (job) => {
     let videoUrl: string;
 
     switch (provider) {
-      case 'kling':
-      case 'kling-2.6':
-        videoUrl = await KlingService.generateVideo(jobId, prompt, options);
+      // Western Big Three
+      case 'sora':
+      case 'sora-2':
+        videoUrl = await SoraService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'veo':
+      case 'veo-3.1':
+        videoUrl = await VeoService.generateVideo(jobId, prompt, options);
         break;
 
       case 'runway':
@@ -94,6 +109,69 @@ videoGenerationQueue.process(async (job) => {
         videoUrl = await RunwayService.generateVideoGen3(jobId, prompt, options);
         break;
 
+      case 'runway-gen4':
+      case 'runway-gen4.5':
+        videoUrl = await RunwayService.generateVideoGen4(jobId, prompt, options);
+        break;
+
+      // Chinese Innovation Leaders
+      case 'hunyuan':
+      case 'hunyuan-1.5':
+        videoUrl = await HunyuanService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'hy-world':
+      case 'hy-world-1.5':
+        // WorldPlay requires special handling (interactive session)
+        throw new Error('HY-World requires interactive session, use startWorldPlaySession instead');
+
+      case 'wan':
+      case 'wan-2.2':
+        videoUrl = await WanService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'kling':
+      case 'kling-2.6':
+        videoUrl = await KlingService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'kling-o1':
+        // O1 requires start + end frames
+        if (!options?.startFrame || !options?.endFrame) {
+          throw new Error('Kling O1 requires startFrame and endFrame options');
+        }
+        const result = await KlingService.generateWithO1(jobId, options.startFrame, options.endFrame, prompt, options);
+        videoUrl = result.videoUrl;
+        break;
+
+      case 'hailuo':
+      case 'hailuo-2.3':
+        videoUrl = await HailuoService.generateVideo(jobId, prompt, options);
+        break;
+
+      // Specialized Innovators
+      case 'luma':
+      case 'luma-ray3':
+        videoUrl = await LumaService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'pika':
+      case 'pika-2.2':
+        videoUrl = await PikaService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'mochi':
+      case 'mochi-1':
+        videoUrl = await MochiService.generateVideo(jobId, prompt, options);
+        break;
+
+      // Research Frontier
+      case 'starflow':
+      case 'starflow-v':
+        videoUrl = await STARFlowService.generateVideo(jobId, prompt, options);
+        break;
+
+      // Legacy Replicate models
       case 'replicate-zeroscope':
         videoUrl = await ReplicateService.generateVideoZeroscope(jobId, prompt, options);
         break;
