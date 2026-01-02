@@ -1,0 +1,50 @@
+// Add this to your main schema.prisma file
+
+model Asset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Asset details
+  name      String
+  type      AssetType
+  url       String
+  thumbnailUrl String?
+
+  // Metadata
+  size      Int      // in bytes
+  mimeType  String
+  width     Int?
+  height    Int?
+  duration  Float?   // for videos/audio in seconds
+
+  // Organization
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  tags      String[]
+
+  // Storage
+  s3Key     String   // S3 object key
+  s3Bucket  String   @default("neurafield-quantum")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([type])
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  OTHER
+}
+
+// Add to User model:
+// assets Asset[]
+
+// Add to Project model:
+// assets Asset[]

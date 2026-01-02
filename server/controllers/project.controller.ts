@@ -209,11 +209,32 @@ export class ProjectController {
       throw new AppError('Project not found', 404);
     }
 
-    // Get assets (assuming you have an Asset model)
-    // This is a placeholder
+    // Get all assets associated with this project
+    const assets = await prisma.asset.findMany({
+      where: {
+        projectId: id,
+        userId,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        url: true,
+        thumbnailUrl: true,
+        size: true,
+        mimeType: true,
+        width: true,
+        height: true,
+        duration: true,
+        tags: true,
+        createdAt: true,
+      },
+    });
+
     res.json({
       success: true,
-      data: { assets: [] },
+      data: { assets },
     });
   }
 }

@@ -77,20 +77,155 @@ export class RunwayService {
   static async imageToVideo(
     jobId: string,
     imageUrl: string,
-    prompt: string,
-    duration = 4
+    prompt?: string,
+    options?: {
+      duration?: number;
+      motion?: number;
+      seed?: number;
+    }
   ): Promise<string> {
     try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 5 },
+      });
+
       const response = await this.api.post('/gen2/image-to-video', {
         image_url: imageUrl,
-        prompt,
-        duration,
+        prompt: prompt || 'Animate this image with natural motion',
+        duration: options?.duration || 4,
+        motion: options?.motion || 5,
+        seed: options?.seed,
       });
 
       const videoUrl = await this.pollTask(response.data.id, jobId);
       return videoUrl;
     } catch (error: any) {
       logger.error('Runway image-to-video failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Video to video - Transform existing video
+   */
+  static async videoToVideo(
+    jobId: string,
+    videoUrl: string,
+    prompt: string,
+    options?: {
+      style?: string;
+      strength?: number;
+      seed?: number;
+    }
+  ): Promise<string> {
+    try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 5 },
+      });
+
+      const response = await this.api.post('/gen2/video-to-video', {
+        video_url: videoUrl,
+        prompt,
+        style: options?.style,
+        strength: options?.strength || 0.7,
+        seed: options?.seed,
+      });
+
+      const transformedUrl = await this.pollTask(response.data.id, jobId);
+      return transformedUrl;
+    } catch (error: any) {
+      logger.error('Runway video-to-video failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Generate video with Gen-3 Alpha (latest model)
+   */
+  static async generateVideoGen3(
+    jobId: string,
+    prompt: string,
+    options?: {
+      duration?: number;
+      ratio?: '16:9' | '9:16' | '1:1';
+      seed?: number;
+    }
+  ): Promise<string> {
+    try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 10 },
+      });
+
+      const response = await this.api.post('/gen3/generate', {
+        prompt,
+        duration: options?.duration || 5,
+        aspect_ratio: options?.ratio || '16:9',
+        seed: options?.seed,
+      });
+
+      const videoUrl = await this.pollTask(response.data.id, jobId);
+      return videoUrl;
+    } catch (error: any) {
+      logger.error('Runway Gen-3 failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Upscale video to higher resolution
+   */
+  static async upscaleVideo(
+    jobId: string,
+    videoUrl: string,
+    targetResolution: '1080p' | '4k' = '4k'
+  ): Promise<string> {
+    try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 5 },
+      });
+
+      const response = await this.api.post('/upscale', {
+        video_url: videoUrl,
+        target_resolution: targetResolution,
+      });
+
+      const upscaledUrl = await this.pollTask(response.data.id, jobId);
+      return upscaledUrl;
+    } catch (error: any) {
+      logger.error('Runway upscale failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Inpaint video - Remove or replace objects
+   */
+  static async inpaintVideo(
+    jobId: string,
+    videoUrl: string,
+    maskUrl: string,
+    prompt: string
+  ): Promise<string> {
+    try {
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'PROCESSING', progress: 5 },
+      });
+
+      const response = await this.api.post('/inpaint', {
+        video_url: videoUrl,
+        mask_url: maskUrl,
+        prompt,
+      });
+
+      const inpaintedUrl = await this.pollTask(response.data.id, jobId);
+      return inpaintedUrl;
+    } catch (error: any) {
+      logger.error('Runway inpaint failed', { error: error.message });
       throw error;
     }
   }

@@ -194,6 +194,10 @@ export class GenerationController {
       throw new AppError('Video URL is required', 400);
     }
 
+    if (!prompt) {
+      throw new AppError('Prompt is required for video transformation', 400);
+    }
+
     // Check credits
     const hasCredits = await CreditsService.hasCredits(userId, 30);
     if (!hasCredits) {
@@ -206,7 +210,7 @@ export class GenerationController {
         userId,
         type: 'VIDEO_TO_VIDEO',
         status: 'PENDING',
-        prompt: prompt || 'Transform this video',
+        prompt,
         provider: 'runway',
         options: { videoUrl, style, ...options },
       },
@@ -215,7 +219,10 @@ export class GenerationController {
     // Deduct credits
     await CreditsService.deductCredits(userId, 30, job.id, 'Video-to-video');
 
-    // Process async
+    // Emit job created event
+    io.to(`user:${userId}`).emit('job:created', { jobId: job.id });
+
+    // Send immediate response
     res.status(202).json({
       success: true,
       data: {
@@ -228,15 +235,33 @@ export class GenerationController {
       message: 'Video transformation started',
     });
 
-    // Process in background (you would implement this properly)
-    // For now, just updating status
-    setTimeout(async () => {
-      await prisma.job.update({
-        where: { id: job.id },
-        data: { status: 'PROCESSING' },
-      });
-      io.to(`user:${userId}`).emit('job:processing', { jobId: job.id });
-    }, 1000);
+    // Process in background
+    (async () => {
+      try {
+        io.to(`user:${userId}`).emit('job:processing', { jobId: job.id });
+
+        const transformedUrl = await RunwayService.videoToVideo(
+          job.id,
+          videoUrl,
+          prompt,
+          { style, ...options }
+        );
+
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: 'COMPLETED', outputUrl: transformedUrl, completedAt: new Date() },
+        });
+
+        io.to(`user:${userId}`).emit('job:completed', { jobId: job.id, outputUrl: transformedUrl });
+      } catch (error: any) {
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: 'FAILED', error: error.message },
+        });
+
+        io.to(`user:${userId}`).emit('job:failed', { jobId: job.id, error: error.message });
+      }
+    })();
   }
 
   /**
