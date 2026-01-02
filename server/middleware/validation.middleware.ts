@@ -58,11 +58,23 @@ export const schemas = {
   generateVideo: z.object({
     body: z.object({
       prompt: z.string().min(1, 'Prompt is required'),
-      provider: z.enum(['runway', 'replicate-zeroscope', 'replicate-animatediff']),
+      provider: z.enum([
+        'kling',
+        'kling-2.6',
+        'runway',
+        'runway-gen2',
+        'runway-gen3',
+        'replicate-zeroscope',
+        'replicate-animatediff'
+      ]),
       options: z.object({
         duration: z.number().min(1).max(30).optional(),
         resolution: z.enum(['720p', '1080p', '4k']).optional(),
         fps: z.number().min(15).max(60).optional(),
+        mode: z.enum(['standard', 'pro']).optional(), // For Kling
+        aspectRatio: z.enum(['16:9', '9:16', '1:1']).optional(), // For Kling
+        negativePrompt: z.string().optional(),
+        seed: z.number().optional(),
       }).optional(),
     }),
   }),

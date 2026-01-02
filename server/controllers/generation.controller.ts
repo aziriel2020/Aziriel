@@ -12,6 +12,7 @@ import { ReplicateService } from '../services/ai/replicate.service';
 import { OpenAIService } from '../services/ai/openai.service';
 import { AnthropicService } from '../services/ai/anthropic.service';
 import { GoogleService } from '../services/ai/google.service';
+import { KlingService } from '../services/ai/kling.service';
 import { io } from '../app';
 
 export class GenerationController {
@@ -520,7 +521,15 @@ export class GenerationController {
         { id: 'flux', name: 'Flux Schnell', provider: 'replicate' },
       ],
       video: [
+        {
+          id: 'kling-2.6',
+          name: 'Kling AI 2.6 (Best Quality)',
+          provider: 'kling',
+          features: ['Character consistency', 'Camera control', 'Up to 10s', '1080p'],
+          description: 'Superior motion quality and consistency'
+        },
         { id: 'runway-gen3', name: 'Runway Gen-3 Alpha', provider: 'runway' },
+        { id: 'runway-gen2', name: 'Runway Gen-2', provider: 'runway' },
         { id: 'zeroscope', name: 'Zeroscope V2 XL', provider: 'replicate' },
         { id: 'animatediff', name: 'AnimateDiff', provider: 'replicate' },
       ],

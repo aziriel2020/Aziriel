@@ -66,11 +66,15 @@ POST /api/generate/video
 ```json
 {
   "prompt": "A beautiful sunset over the ocean",
-  "provider": "runway", // "runway" | "replicate-zeroscope" | "replicate-animatediff"
+  "provider": "kling-2.6", // "kling" | "kling-2.6" | "runway" | "runway-gen2" | "runway-gen3" | "replicate-zeroscope" | "replicate-animatediff"
   "options": {
-    "duration": 4,
+    "duration": 5, // 5 or 10 for Kling
     "resolution": "1080p", // "720p" | "1080p" | "4k"
-    "fps": 30
+    "fps": 30,
+    "mode": "pro", // "standard" | "pro" (Kling only)
+    "aspectRatio": "16:9", // "16:9" | "9:16" | "1:1" (Kling only)
+    "negativePrompt": "blurry, low quality", // (Kling only)
+    "seed": 42 // (Kling only)
   }
 }
 ```

@@ -11,6 +11,7 @@ import { ReplicateService } from './ai/replicate.service';
 import { OpenAIService } from './ai/openai.service';
 import { AnthropicService } from './ai/anthropic.service';
 import { GoogleService } from './ai/google.service';
+import { KlingService } from './ai/kling.service';
 import { VideoService } from './video.service';
 
 // Create queues for different job types
@@ -79,8 +80,18 @@ videoGenerationQueue.process(async (job) => {
     let videoUrl: string;
 
     switch (provider) {
+      case 'kling':
+      case 'kling-2.6':
+        videoUrl = await KlingService.generateVideo(jobId, prompt, options);
+        break;
+
       case 'runway':
+      case 'runway-gen2':
         videoUrl = await RunwayService.generateVideo(jobId, prompt, options);
+        break;
+
+      case 'runway-gen3':
+        videoUrl = await RunwayService.generateVideoGen3(jobId, prompt, options);
         break;
 
       case 'replicate-zeroscope':
