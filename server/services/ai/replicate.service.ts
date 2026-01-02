@@ -49,14 +49,45 @@ export class ReplicateService {
   /**
    * Generate video with Zeroscope
    */
-  static async generateVideoZeroscope(jobId: string, prompt: string): Promise<string> {
+  static async generateVideoZeroscope(
+    jobId: string,
+    prompt: string,
+    options?: {
+      num_frames?: number;
+      num_inference_steps?: number;
+    }
+  ): Promise<string> {
     return this.runModel(
       jobId,
       'anotherjesse/zeroscope-v2-xl:9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351',
       {
         prompt,
-        num_frames: 24,
-        num_inference_steps: 50,
+        num_frames: options?.num_frames || 24,
+        num_inference_steps: options?.num_inference_steps || 50,
+      }
+    );
+  }
+
+  /**
+   * Generate video with AnimateDiff
+   */
+  static async generateVideoAnimateDiff(
+    jobId: string,
+    prompt: string,
+    options?: {
+      motion_module?: string;
+      num_frames?: number;
+      guidance_scale?: number;
+    }
+  ): Promise<string> {
+    return this.runModel(
+      jobId,
+      'lucataco/animate-diff:beecf59c4aee8d81bf04f0381033dfa10dc16e845b4ae00d281e2fa377e48a9f',
+      {
+        prompt,
+        motion_module: options?.motion_module || 'mm_sd_v15_v2.ckpt',
+        num_frames: options?.num_frames || 16,
+        guidance_scale: options?.guidance_scale || 7.5,
       }
     );
   }
@@ -64,15 +95,49 @@ export class ReplicateService {
   /**
    * Generate image with SDXL
    */
-  static async generateImageSDXL(jobId: string, prompt: string, negativePrompt?: string): Promise<string> {
+  static async generateImageSDXL(
+    jobId: string,
+    prompt: string,
+    options?: {
+      negative_prompt?: string;
+      width?: number;
+      height?: number;
+      num_inference_steps?: number;
+    }
+  ): Promise<string> {
     return this.runModel(
       jobId,
       'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
       {
         prompt,
-        negative_prompt: negativePrompt,
-        width: 1024,
-        height: 1024,
+        negative_prompt: options?.negative_prompt,
+        width: options?.width || 1024,
+        height: options?.height || 1024,
+        num_inference_steps: options?.num_inference_steps || 50,
+      }
+    );
+  }
+
+  /**
+   * Generate image with Flux
+   */
+  static async generateImageFlux(
+    jobId: string,
+    prompt: string,
+    options?: {
+      aspect_ratio?: string;
+      num_outputs?: number;
+      guidance?: number;
+    }
+  ): Promise<string> {
+    return this.runModel(
+      jobId,
+      'black-forest-labs/flux-schnell:bf0ac67a84fb74f0a0aac48e3c4d58f4f13e8c6e81b67c17c9fe0dbc6b0d5c4f',
+      {
+        prompt,
+        aspect_ratio: options?.aspect_ratio || '1:1',
+        num_outputs: options?.num_outputs || 1,
+        guidance: options?.guidance || 3.5,
       }
     );
   }
