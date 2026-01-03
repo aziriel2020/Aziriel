@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEURAFIELD QUANTUM v5.0 - The $10 Billion Reference Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <style>
+    :root {
+      --primary-purple: #8b5cf6;
+      --primary-cyan: #06b6d4;
+      --primary-pink: #ec4899;
+      --bg-dark: #0a0a0f;
+      --bg-card: rgba(20, 20, 35, 0.7);
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0b0;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 50%, #0a0a0f 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        repeating-linear-gradient(0deg, rgba(134, 92, 246, 0.05) 0px, transparent 1px, transparent 2px, rgba(134, 92, 246, 0.05) 3px),
+        repeating-linear-gradient(90deg, rgba(6, 182, 212, 0.05) 0px, transparent 1px, transparent 2px, rgba(6, 182, 212, 0.05) 3px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+      animation: gridPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes gridPulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header & Navigation */
+    header {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.2);
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--primary-purple), var(--primary-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      position: relative;
+      padding: 0.5rem 1rem;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--primary-cyan);
+    }
+
+    .nav-links a.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-purple), var(--primary-cyan));
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 20px;
+      border: 1px solid var(--success);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+      border-color: var(--primary-cyan);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      color: var(--primary-cyan);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Orbitron', sans-serif;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-purple), var(--primary-cyan));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+    }
+
+    .btn-secondary {
+      background: rgba(139, 92, 246, 0.2);
+      color: var(--primary-purple);
+      border: 1px solid var(--primary-purple);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .tab {
+      padding: 1rem 2rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .tab.active {
+      color: var(--primary-cyan);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-purple), var(--primary-cyan));
+    }
+
+    /* Input Fields */
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .input-group input,
+    .input-group textarea,
+    .input-group select {
+      width: 100%;
+      padding: 0.75rem;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .input-group textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    /* Stats Cards */
+    .stat-card {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--primary-purple), var(--primary-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* Provider Cards */
+    .provider-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .provider-card:hover {
+      border-color: var(--primary-cyan);
+      transform: translateY(-2px);
+    }
+
+    .provider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .provider-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--primary-cyan);
+    }
+
+    .tier-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .tier-premium {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: #000;
+    }
+
+    .tier-standard {
+      background: rgba(6, 182, 212, 0.3);
+      color: var(--primary-cyan);
+    }
+
+    .tier-opensource {
+      background: rgba(16, 185, 129, 0.3);
+      color: var(--success);
+    }
+
+    /* Page System */
+    .page {
+      display: none;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 4rem 0;
+      position: relative;
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary-purple), var(--primary-cyan), var(--primary-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient 3s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .hero-subtitle {
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(139, 92, 246, 0.2);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-purple), var(--primary-cyan));
+      transition: width 0.5s ease;
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    /* Job Queue */
+    .job-item {
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .job-status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-pending { background: rgba(251, 191, 36, 0.3); color: var(--warning); }
+    .status-processing { background: rgba(6, 182, 212, 0.3); color: var(--primary-cyan); }
+    .status-completed { background: rgba(16, 185, 129, 0.3); color: var(--success); }
+    .status-failed { background: rgba(239, 68, 68, 0.3); color: var(--error); }
+
+    /* App Cards */
+    .app-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .app-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary-cyan);
+      box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+    }
+
+    .app-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .app-name {
+      font-weight: 700;
+      color: var(--primary-cyan);
+      margin-bottom: 0.5rem;
+    }
+
+    .app-price {
+      color: var(--success);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-links {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="container">
+      <div class="logo">NEURAFIELD QUANTUM v5.0</div>
+      <ul class="nav-links">
+        <li><a href="#dashboard" class="nav-link active" onclick="showPage('dashboard')">Dashboard</a></li>
+        <li><a href="#generate" class="nav-link" onclick="showPage('generate')">Generate</a></li>
+        <li><a href="#cinematix" class="nav-link" onclick="showPage('cinematix')">Cinematix</a></li>
+        <li><a href="#providers" class="nav-link" onclick="showPage('providers')">Providers</a></li>
+        <li><a href="#apps" class="nav-link" onclick="showPage('apps')">Apps</a></li>
+      </ul>
+      <div class="connection-status">
+        <div class="status-dot"></div>
+        <span id="connection-text">Connected</span>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- DASHBOARD PAGE -->
+    <div id="dashboard" class="page active">
+      <div class="hero">
+        <h1>The $10 Billion Reference Platform</h1>
+        <p class="hero-subtitle">200+ Providers • 500+ Models • 600+ Features • 12 Cinematix Innovations</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-providers">200+</div>
+          <div class="stat-label">AI Providers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-models">500+</div>
+          <div class="stat-label">AI Models</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">200+</div>
+          <div class="stat-label">Generation Modes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">12</div>
+          <div class="stat-label">Cinematix Innovations</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Featured Providers</h2>
+        </div>
+        <div class="grid-3" id="featured-providers">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Cinematix Innovations</h2>
+        </div>
+        <div class="grid-2">
+          <div class="provider-card">
+            <div class="provider-name">🎬 AI Director Mode</div>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">18 shot types, 21 camera movements, 16 transitions</p>
+          </div>
+          <div class="provider-card">
+            <div class="provider-name">💥 VFX Composer</div>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">9 effect categories with physics-aware interactions</p>
+          </div>
+          <div class="provider-card">
+            <div class="provider-name">😊 Emotional Cinematography</div>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">10 emotion profiles with complete camera & color settings</p>
+          </div>
+          <div class="provider-card">
+            <div class="provider-name">🎞️ Scene DNA Analyzer</div>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">8 iconic movie scenes with visual DNA extraction</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GENERATE PAGE -->
+    <div id="generate" class="page">
+      <h1 style="margin: 2rem 0;">AI Generation Studio</h1>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchGenerateTab('video')">Video</button>
+        <button class="tab" onclick="switchGenerateTab('image')">Image</button>
+        <button class="tab" onclick="switchGenerateTab('audio')">Audio</button>
+        <button class="tab" onclick="switchGenerateTab('3d')">3D</button>
+        <button class="tab" onclick="switchGenerateTab('chat')">Chat</button>
+      </div>
+
+      <div id="generate-video" class="generate-tab-content">
+        <div class="card">
+          <h2 class="card-title">Video Generation</h2>
+          <div class="input-group">
+            <label>Prompt</label>
+            <textarea id="video-prompt" placeholder="Describe your video..."></textarea>
+          </div>
+          <div class="input-group">
+            <label>Provider</label>
+            <select id="video-provider">
+              <option value="openai-sora">OpenAI Sora</option>
+              <option value="runway">Runway Gen-4</option>
+              <option value="kling">Kling AI</option>
+              <option value="luma">Luma Ray 2</option>
+              <option value="google-veo">Google Veo</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Mode</label>
+            <select id="video-mode">
+              <option value="text-to-video">Text to Video</option>
+              <option value="image-to-video">Image to Video</option>
+              <option value="camera-control">Camera Control</option>
+              <option value="lip-sync">Lip Sync</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateVideo()">Generate Video</button>
+        </div>
+      </div>
+
+      <div id="generate-image" class="generate-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">Image Generation</h2>
+          <div class="input-group">
+            <label>Prompt</label>
+            <textarea id="image-prompt" placeholder="Describe your image..."></textarea>
+          </div>
+          <div class="input-group">
+            <label>Provider</label>
+            <select id="image-provider">
+              <option value="midjourney">Midjourney</option>
+              <option value="flux">FLUX</option>
+              <option value="openai-dalle">DALL-E</option>
+              <option value="stability">Stability AI</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateImage()">Generate Image</button>
+        </div>
+      </div>
+
+      <div id="generate-audio" class="generate-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">Audio Generation</h2>
+          <div class="input-group">
+            <label>Prompt</label>
+            <textarea id="audio-prompt" placeholder="Describe your music or audio..."></textarea>
+          </div>
+          <div class="input-group">
+            <label>Provider</label>
+            <select id="audio-provider">
+              <option value="suno">Suno</option>
+              <option value="udio">Udio</option>
+              <option value="stable-audio">Stable Audio</option>
+              <option value="elevenlabs">ElevenLabs</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateAudio()">Generate Audio</button>
+        </div>
+      </div>
+
+      <div id="generate-3d" class="generate-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">3D Generation</h2>
+          <div class="input-group">
+            <label>Prompt</label>
+            <textarea id="3d-prompt" placeholder="Describe your 3D model..."></textarea>
+          </div>
+          <div class="input-group">
+            <label>Provider</label>
+            <select id="3d-provider">
+              <option value="meshy">Meshy</option>
+              <option value="tripo">Tripo AI</option>
+              <option value="luma-genie">Luma Genie</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generate3D()">Generate 3D Model</button>
+        </div>
+      </div>
+
+      <div id="generate-chat" class="generate-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">LLM Chat</h2>
+          <div id="chat-messages" style="min-height: 300px; max-height: 500px; overflow-y: auto; padding: 1rem; background: rgba(139, 92, 246, 0.05); border-radius: 8px; margin-bottom: 1rem;">
+            <div style="color: var(--text-secondary); text-align: center;">Start a conversation...</div>
+          </div>
+          <div class="input-group">
+            <label>Message</label>
+            <textarea id="chat-input" placeholder="Type your message..."></textarea>
+          </div>
+          <div class="input-group">
+            <label>Provider</label>
+            <select id="chat-provider">
+              <option value="openai">OpenAI GPT-4</option>
+              <option value="anthropic">Claude 4</option>
+              <option value="google-gemini">Gemini 2.0</option>
+              <option value="deepseek">DeepSeek R1</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="sendChat()">Send Message</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Job Queue</h2>
+        </div>
+        <div id="job-queue">
+          <p style="color: var(--text-secondary); text-align: center;">No jobs yet. Start generating!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CINEMATIX PAGE -->
+    <div id="cinematix" class="page">
+      <h1 style="margin: 2rem 0;">Cinematix Engine - 12 Revolutionary Innovations</h1>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchCinematixTab('director')">AI Director</button>
+        <button class="tab" onclick="switchCinematixTab('vfx')">VFX Composer</button>
+        <button class="tab" onclick="switchCinematixTab('emotions')">Emotions</button>
+        <button class="tab" onclick="switchCinematixTab('directors')">Director Styles</button>
+      </div>
+
+      <div id="cinematix-director" class="cinematix-tab-content">
+        <div class="card">
+          <h2 class="card-title">AI Director Mode</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">Analyze prompts and suggest optimal cinematography</p>
+          <div id="shot-types-container"></div>
+        </div>
+      </div>
+
+      <div id="cinematix-vfx" class="cinematix-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">VFX Composer</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">9 effect categories with physics-aware interactions</p>
+          <div id="vfx-categories-container"></div>
+        </div>
+      </div>
+
+      <div id="cinematix-emotions" class="cinematix-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">Emotional Cinematography AI</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">10 emotion profiles with complete settings</p>
+          <div id="emotions-container"></div>
+        </div>
+      </div>
+
+      <div id="cinematix-directors" class="cinematix-tab-content" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">Director Style Presets</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">Emulate 10 legendary filmmakers</p>
+          <div id="directors-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROVIDERS PAGE -->
+    <div id="providers" class="page">
+      <h1 style="margin: 2rem 0;">AI Providers Directory</h1>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchProviderTab('all')">All</button>
+        <button class="tab" onclick="switchProviderTab('video')">Video (35+)</button>
+        <button class="tab" onclick="switchProviderTab('image')">Image (40+)</button>
+        <button class="tab" onclick="switchProviderTab('audio')">Audio (30+)</button>
+        <button class="tab" onclick="switchProviderTab('llm')">LLM (50+)</button>
+        <button class="tab" onclick="switchProviderTab('3d')">3D (15+)</button>
+      </div>
+
+      <div id="providers-container" class="grid-3">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- APPS PAGE -->
+    <div id="apps" class="page">
+      <h1 style="margin: 2rem 0;">Apps Marketplace - 60+ Included Apps</h1>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchAppTab('all')">All Apps</button>
+        <button class="tab" onclick="switchAppTab('creative')">Creative</button>
+        <button class="tab" onclick="switchAppTab('productivity')">Productivity</button>
+        <button class="tab" onclick="switchAppTab('marketing')">Marketing</button>
+        <button class="tab" onclick="switchAppTab('business')">Business</button>
+        <button class="tab" onclick="switchAppTab('developer')">Developer</button>
+        <button class="tab" onclick="switchAppTab('education')">Education</button>
+        <button class="tab" onclick="switchAppTab('entertainment')">Entertainment</button>
+        <button class="tab" onclick="switchAppTab('lifestyle')">Lifestyle</button>
+      </div>
+
+      <div id="apps-container" class="grid-4">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Socket.IO Connection
+    const socket = io();
+
+    socket.on('welcome', (data) => {
+      console.log(data.message);
+      if (data.stats) {
+        document.getElementById('stat-providers').textContent = data.stats.providers + '+';
+        document.getElementById('stat-models').textContent = data.stats.models + '+';
+      }
+    });
+
+    socket.on('job:created', (job) => {
+      addJobToQueue(job);
+    });
+
+    socket.on('job:progress', (job) => {
+      updateJobProgress(job);
+    });
+
+    socket.on('connect', () => {
+      document.getElementById('connection-text').textContent = 'Connected';
+    });
+
+    socket.on('disconnect', () => {
+      document.getElementById('connection-text').textContent = 'Disconnected';
+    });
+
+    // Page Navigation
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      
+      document.getElementById(pageId).classList.add('active');
+      event.target.classList.add('active');
+
+      if (pageId === 'providers') loadProviders();
+      if (pageId === 'apps') loadApps();
+      if (pageId === 'cinematix') loadCinematix();
+      if (pageId === 'dashboard') loadDashboard();
+    }
+
+    // Generate Tab Switching
+    function switchGenerateTab(tab) {
+      document.querySelectorAll('#generate .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.querySelectorAll('.generate-tab-content').forEach(content => content.style.display = 'none');
+      document.getElementById(`generate-${tab}`).style.display = 'block';
+    }
+
+    // Cinematix Tab Switching
+    function switchCinematixTab(tab) {
+      document.querySelectorAll('#cinematix .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.querySelectorAll('.cinematix-tab-content').forEach(content => content.style.display = 'none');
+      document.getElementById(`cinematix-${tab}`).style.display = 'block';
+    }
+
+    // Provider Tab Switching
+    async function switchProviderTab(category) {
+      document.querySelectorAll('#providers .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (category === 'all') {
+        loadProviders();
+      } else {
+        const response = await fetch(`/api/providers/${category}`);
+        const providers = await response.json();
+        displayProviders(providers);
+      }
+    }
+
+    // App Tab Switching
+    async function switchAppTab(category) {
+      document.querySelectorAll('#apps .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const response = await fetch('/api/apps');
+      const apps = await response.json();
+
+      if (category === 'all') {
+        const allApps = Object.values(apps).flat();
+        displayApps(allApps);
+      } else {
+        displayApps(apps[category] || []);
+      }
+    }
+
+    // Generation Functions
+    async function generateVideo() {
+      const prompt = document.getElementById('video-prompt').value;
+      const provider = document.getElementById('video-provider').value;
+      const mode = document.getElementById('video-mode').value;
+
+      const response = await fetch('/api/generate/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, provider, mode })
+      });
+
+      const data = await response.json();
+      console.log('Video generation started:', data);
+    }
+
+    async function generateImage() {
+      const prompt = document.getElementById('image-prompt').value;
+      const provider = document.getElementById('image-provider').value;
+
+      const response = await fetch('/api/generate/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, provider })
+      });
+
+      const data = await response.json();
+      console.log('Image generation started:', data);
+    }
+
+    async function generateAudio() {
+      const prompt = document.getElementById('audio-prompt').value;
+      const provider = document.getElementById('audio-provider').value;
+
+      const response = await fetch('/api/generate/audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, provider })
+      });
+
+      const data = await response.json();
+      console.log('Audio generation started:', data);
+    }
+
+    async function generate3D() {
+      const prompt = document.getElementById('3d-prompt').value;
+      const provider = document.getElementById('3d-provider').value;
+
+      const response = await fetch('/api/generate/3d', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, provider })
+      });
+
+      const data = await response.json();
+      console.log('3D generation started:', data);
+    }
+
+    async function sendChat() {
+      const message = document.getElementById('chat-input').value;
+      const provider = document.getElementById('chat-provider').value;
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, provider, model: 'latest' })
+      });
+
+      const data = await response.json();
+      
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML += `
+        <div style="margin-bottom: 1rem;">
+          <strong style="color: var(--primary-cyan);">You:</strong> ${message}
+        </div>
+        <div style="margin-bottom: 1rem; padding-left: 1rem; border-left: 2px solid var(--primary-purple);">
+          <strong style="color: var(--primary-purple);">${provider}:</strong> ${data.response}
+        </div>
+      `;
+      
+      document.getElementById('chat-input').value = '';
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Job Queue Management
+    function addJobToQueue(job) {
+      const queue = document.getElementById('job-queue');
+      if (queue.querySelector('p')) queue.innerHTML = '';
+
+      const jobHtml = `
+        <div class="job-item" id="job-${job.id}">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${job.type.toUpperCase()}</strong>: ${job.prompt || 'Processing...'}
+            </div>
+            <span class="job-status status-${job.status}">${job.status}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${job.progress}%"></div>
+          </div>
+        </div>
+      `;
+      
+      queue.insertAdjacentHTML('afterbegin', jobHtml);
+    }
+
+    function updateJobProgress(job) {
+      const jobEl = document.getElementById(`job-${job.id}`);
+      if (jobEl) {
+        jobEl.querySelector('.job-status').className = `job-status status-${job.status}`;
+        jobEl.querySelector('.job-status').textContent = job.status;
+        jobEl.querySelector('.progress-fill').style.width = `${job.progress}%`;
+      }
+    }
+
+    // Load Functions
+    async function loadDashboard() {
+      const response = await fetch('/api/providers');
+      const providers = await response.json();
+      
+      const featured = providers.slice(0, 6);
+      const container = document.getElementById('featured-providers');
+      container.innerHTML = featured.map(p => `
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-name">${p.name}</div>
+            ${p.tier ? `<span class="tier-badge tier-${p.tier}">${p.tier}</span>` : ''}
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">${p.description}</p>
+          <p style="color: var(--primary-cyan); margin-top: 0.5rem; font-size: 0.85rem;">${p.models.length} models</p>
+        </div>
+      `).join('');
+    }
+
+    async function loadProviders() {
+      const response = await fetch('/api/providers');
+      const providers = await response.json();
+      displayProviders(providers);
+    }
+
+    function displayProviders(providers) {
+      const container = document.getElementById('providers-container');
+      container.innerHTML = providers.map(p => `
+        <div class="provider-card">
+          <div class="provider-header">
+            <div class="provider-name">${p.name}</div>
+            ${p.tier ? `<span class="tier-badge tier-${p.tier}">${p.tier}</span>` : ''}
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">${p.description}</p>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;"><strong>Category:</strong> ${p.category}</p>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;"><strong>Models:</strong> ${p.models.length}</p>
+          <p style="color: var(--primary-cyan); margin-top: 0.5rem; font-size: 0.85rem;">${p.features.slice(0, 3).join(', ')}</p>
+        </div>
+      `).join('');
+    }
+
+    async function loadApps() {
+      const response = await fetch('/api/apps');
+      const apps = await response.json();
+      const allApps = Object.values(apps).flat();
+      displayApps(allApps);
+    }
+
+    function displayApps(apps) {
+      const container = document.getElementById('apps-container');
+      container.innerHTML = apps.map(app => `
+        <div class="app-card">
+          <div class="app-icon">${app.icon}</div>
+          <div class="app-name">${app.name}</div>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0.5rem 0;">${app.description}</p>
+          <div class="app-price">${app.price}</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadCinematix() {
+      const response = await fetch('/api/cinematix');
+      const data = await response.json();
+
+      // Load Shot Types
+      document.getElementById('shot-types-container').innerHTML = `
+        <h3 style="color: var(--primary-purple); margin-bottom: 1rem;">Shot Types (${data.shotTypes.length})</h3>
+        <div class="grid-3">
+          ${data.shotTypes.slice(0, 9).map(shot => `
+            <div class="provider-card">
+              <div class="provider-name">${shot.abbreviation} - ${shot.name}</div>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">${shot.description}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Load VFX Categories
+      document.getElementById('vfx-categories-container').innerHTML = `
+        <div class="grid-3">
+          ${data.vfxCategories.map(cat => `
+            <div class="provider-card">
+              <div class="provider-name">${cat.name}</div>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">${cat.description}</p>
+              <p style="color: var(--primary-cyan); margin-top: 0.5rem; font-size: 0.85rem;">${cat.variants.length} variants</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Load Emotions
+      document.getElementById('emotions-container').innerHTML = `
+        <div class="grid-2">
+          ${data.emotionProfiles.map(emotion => `
+            <div class="provider-card">
+              <div class="provider-name">${emotion.name}</div>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">${emotion.lightingSuggestion}</p>
+              <p style="color: var(--primary-cyan); margin-top: 0.5rem; font-size: 0.85rem;">Music: ${emotion.musicSuggestion}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Load Directors
+      document.getElementById('directors-container').innerHTML = `
+        <div class="grid-2">
+          ${data.directorStyles.map(director => `
+            <div class="provider-card">
+              <div class="provider-name">${director.director}</div>
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0.5rem 0;">${director.yearsActive}</p>
+              <p style="color: var(--text-secondary); font-size: 0.85rem;"><strong>Style:</strong> ${director.cameraStyle}</p>
+              <p style="color: var(--primary-cyan); margin-top: 0.5rem; font-size: 0.85rem;">${director.signatureTechniques.slice(0, 3).join(', ')}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Initialize
+    loadDashboard();
+  </script>
+</body>
+</html>
