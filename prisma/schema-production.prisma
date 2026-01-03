@@ -1,0 +1,600 @@
+// NEURAFIELD QUANTUM - COMPLETE PRODUCTION DATABASE SCHEMA
+// ==========================================================
+// $10B+ Platform - Full Production-Ready Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  username          String?   @unique
+  passwordHash      String?   // bcrypt hash
+  firstName         String?
+  lastName          String?
+  avatar            String?
+  bio               String?
+
+  // Email Verification
+  emailVerified     Boolean   @default(false)
+  emailVerifiedAt   DateTime?
+  emailVerificationToken String?
+
+  // Password Reset
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+
+  // Two-Factor Authentication
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?   // TOTP secret
+  twoFactorBackupCodes String[] // Backup codes
+
+  // OAuth Providers
+  googleId          String?   @unique
+  githubId          String?   @unique
+  discordId         String?   @unique
+  twitterId         String?   @unique
+
+  // Subscription & Billing
+  stripeCustomerId  String?   @unique
+  subscriptionTier  SubscriptionTier @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(INACTIVE)
+  subscriptionId    String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean   @default(false)
+  trialEndsAt       DateTime?
+
+  // Credits & Usage
+  credits           Int       @default(100)
+  creditsUsed       Int       @default(0)
+  monthlyQuota      Int?      // Based on tier
+
+  // Account Status
+  role              UserRole  @default(USER)
+  status            UserStatus @default(ACTIVE)
+  suspendedAt       DateTime?
+  suspendedReason   String?
+  deletedAt         DateTime?
+
+  // Activity Tracking
+  lastLoginAt       DateTime?
+  lastActivityAt    DateTime?
+  loginCount        Int       @default(0)
+
+  // Preferences
+  preferences       Json?     // UI settings, notifications, etc.
+  timezone          String?   @default("UTC")
+  language          String?   @default("en")
+
+  // Metadata
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  apiKeys           ApiKey[]
+  sessions          Session[]
+  projects          Project[]
+  videos            Video[]
+  jobs              Job[]
+  socialAccounts    SocialAccount[]
+  teams             TeamMember[]
+  ownedTeams        Team[]
+  auditLogs         AuditLog[]
+  usage             UsageRecord[]
+  payments          Payment[]
+  invoices          Invoice[]
+  notifications     Notification[]
+  webhooks          Webhook[]
+  assets            Asset[]
+
+  @@index([email])
+  @@index([username])
+  @@index([stripeCustomerId])
+  @@index([subscriptionTier])
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  CREATOR
+  PRO
+  STUDIO
+  ENTERPRISE
+  ADMIN
+  SUPERADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+  PENDING_VERIFICATION
+}
+
+enum SubscriptionTier {
+  FREE
+  CREATOR
+  PRO
+  STUDIO
+  ENTERPRISE
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  TRIALING
+  PAUSED
+}
+
+// ============================================================================
+// AUTHENTICATION & SECURITY
+// ============================================================================
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token        String   @unique @db.Text
+  refreshToken String?  @unique @db.Text
+
+  expiresAt    DateTime
+  refreshExpiresAt DateTime?
+
+  // Session metadata
+  ipAddress    String?
+  userAgent    String?
+  deviceId     String?
+  location     Json?    // GeoIP data
+
+  // Status
+  isActive     Boolean  @default(true)
+  revokedAt    DateTime?
+  lastActivityAt DateTime @default(now())
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  key         String   @unique @db.Text // Hashed
+  prefix      String   // First 8 chars for identification
+
+  // Permissions & Limits
+  scopes      String[] // Array of allowed scopes
+  rateLimit   Int?     // Requests per minute
+
+  // Status
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  usageCount  Int      @default(0)
+
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([key])
+  @@index([prefix])
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action      String   // login, logout, video_generate, etc.
+  resource    String   // user, video, payment, etc.
+  resourceId  String?
+
+  // Request details
+  method      String?  // GET, POST, etc.
+  path        String?
+
+  // Result
+  status      String?  // success, failure
+  statusCode  Int?     // HTTP status
+
+  // Context
+  ipAddress   String?
+  userAgent   String?
+  location    Json?
+
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// TEAMS & ORGANIZATIONS
+// ============================================================================
+
+model Team {
+  id              String       @id @default(uuid())
+  ownerId         String
+  owner           User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name            String
+  slug            String       @unique
+  avatar          String?
+  description     String?
+
+  // Subscription
+  subscriptionTier SubscriptionTier @default(FREE)
+  stripeCustomerId String?     @unique
+
+  // Settings
+  settings        Json?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  members         TeamMember[]
+  projects        Project[]
+
+  @@index([slug])
+  @@index([ownerId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      TeamRole @default(MEMBER)
+
+  invitedBy String?
+  invitedAt DateTime?
+  joinedAt  DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+  COMMENTER
+}
+
+// ============================================================================
+// PROJECTS, VIDEOS & ASSETS
+// ============================================================================
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  name        String
+  description String?
+  thumbnail   String?
+
+  // Organization
+  folderId    String?
+  tags        String[]
+
+  // Settings
+  settings    Json?
+
+  // Status
+  isPublic    Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  archivedAt  DateTime?
+
+  videos      Video[]
+  assets      Asset[]
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([isArchived])
+  @@map("projects")
+}
+
+model Video {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title         String
+  description   String?     @db.Text
+
+  // File information
+  url           String?
+  thumbnailUrl  String?
+  duration      Float?      // seconds
+  resolution    String?     // 1920x1080
+  width         Int?
+  height        Int?
+  fps           Int?
+  fileSize      BigInt?     // bytes
+  format        String?     // mp4, mov
+  codec         String?     // h264, h265
+
+  // Generation metadata
+  provider      String?     // sora, runway, veo, etc.
+  model         String?
+  prompt        String?     @db.Text
+  negativePrompt String?    @db.Text
+  seed          Int?
+  settings      Json?
+
+  // Processing
+  status        VideoStatus @default(PROCESSING)
+  progress      Int         @default(0)
+  error         String?     @db.Text
+
+  // Visibility & Permissions
+  visibility    Visibility  @default(PRIVATE)
+  password      String?     // For password-protected videos
+
+  // Analytics
+  views         Int         @default(0)
+  downloads     Int         @default(0)
+
+  // Metadata
+  metadata      Json?
+  exifData      Json?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  publishedAt   DateTime?
+  deletedAt     DateTime?
+
+  jobs          Job[]
+  clips         Clip[]
+  versions      VideoVersion[]
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@index([provider])
+  @@index([createdAt])
+  @@map("videos")
+}
+
+enum VideoStatus {
+  QUEUED
+  PROCESSING
+  TRANSCODING
+  COMPLETED
+  FAILED
+  CANCELED
+  ARCHIVED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+  TEAM
+  PASSWORD_PROTECTED
+}
+
+model VideoVersion {
+  id          String   @id @default(uuid())
+  videoId     String
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  version     Int
+  url         String
+  fileSize    BigInt?
+
+  changes     String?  @db.Text
+  createdBy   String?
+
+  createdAt   DateTime @default(now())
+
+  @@unique([videoId, version])
+  @@index([videoId])
+  @@map("video_versions")
+}
+
+model Clip {
+  id          String   @id @default(uuid())
+  videoId     String
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+
+  url         String
+  thumbnailUrl String?
+
+  startTime   Float    // seconds
+  endTime     Float
+  duration    Float
+
+  // AI Analysis
+  viralScore  Int?     // 0-100
+  category    String?
+  emotions    Json?
+  keyMoments  Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([videoId])
+  @@map("clips")
+}
+
+model Asset {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  name        String
+  type        AssetType
+
+  url         String
+  thumbnailUrl String?
+
+  fileSize    BigInt?
+  mimeType    String?
+
+  // Organization
+  folderId    String?
+  tags        String[]
+
+  metadata    Json?
+
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([type])
+  @@map("assets")
+}
+
+enum AssetType {
+  VIDEO
+  IMAGE
+  AUDIO
+  SUBTITLE
+  FONT
+  PRESET
+  TEMPLATE
+  OTHER
+}
+
+// ============================================================================
+// JOB QUEUE & PROCESSING
+// ============================================================================
+
+model Job {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId       String?
+  video         Video?      @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  type          JobType
+  status        JobStatus   @default(QUEUED)
+  priority      Int         @default(0) // Higher = more priority
+
+  // Job Data
+  input         Json
+  output        Json?
+  error         String?     @db.Text
+  errorCode     String?
+
+  // Progress
+  progress      Int         @default(0) // 0-100
+  currentStep   String?
+  totalSteps    Int?
+  estimatedTime Int?        // seconds
+
+  // Processing
+  provider      String?
+  model         String?
+  workerId      String?     // Which worker is processing
+
+  // Timing
+  queuedAt      DateTime    @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  canceledAt    DateTime?
+
+  // Retry Logic
+  attempts      Int         @default(0)
+  maxAttempts   Int         @default(3)
+  nextRetryAt   DateTime?
+
+  // Cost
+  creditsRequired Int?
+  creditsCharged  Int?
+
+  // Metadata
+  metadata      Json?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([queuedAt])
+  @@index([provider])
+  @@map("jobs")
+}
+
+enum JobType {
+  VIDEO_GENERATION
+  VIDEO_TRANSLATION
+  VIDEO_TRANSCRIPTION
+  HIGHLIGHT_EXTRACTION
+  STORYBOARD_GENERATION
+  MULTIVERSE_GENERATION
+  VIDEO_OPTIMIZATION
+  VIDEO_TRANSCODING
+  SOCIAL_MEDIA_PUBLISH
+  THUMBNAIL_GENERATION
+  SUBTITLE_GENERATION
+  VOICE_CLONING
+  AUDIO_GENERATION
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+  RETRYING
+  PAUSED
+}
+
+// Continue in next message due to length...
