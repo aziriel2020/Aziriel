@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Mario Kart 3D Racing</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Arial Black', Arial, sans-serif;
+      background: #000;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #gameContainer {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 100%);
+    }
+
+    #ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 15px;
+      color: white;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .ui-panel {
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 10px;
+      border: 3px solid #FFD700;
+      display: inline-block;
+    }
+
+    #position {
+      font-size: 56px;
+      color: #FFD700;
+      text-align: center;
+      margin-bottom: 8px;
+      text-shadow: 4px 4px 8px rgba(0, 0, 0, 1);
+    }
+
+    #lapCounter, #speedometer {
+      font-size: 22px;
+      margin: 5px 0;
+    }
+
+    #items {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 12px;
+      pointer-events: all;
+    }
+
+    .item-slot {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.3);
+      border: 3px solid #FFD700;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .item-slot:active {
+      transform: scale(0.9);
+    }
+
+    /* Touch Controls */
+    #touchControls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 300px;
+      pointer-events: all;
+      z-index: 5;
+    }
+
+    .joystick {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 4px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      touch-action: none;
+    }
+
+    .joystick-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 215, 0, 0.8);
+      border: 4px solid #FFD700;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.1s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .action-buttons {
+      position: absolute;
+      bottom: 30px;
+      right: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .action-btn {
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 0, 0, 0.7);
+      border: 4px solid #FF0000;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      user-select: none;
+    }
+
+    .action-btn:active {
+      transform: scale(0.9);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .action-btn.brake {
+      background: rgba(0, 100, 255, 0.7);
+      border-color: #0064FF;
+    }
+
+    #startScreen, #gameOverScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h1 {
+      font-size: clamp(32px, 8vw, 72px);
+      color: #FFD700;
+      margin-bottom: 20px;
+      text-shadow: 5px 5px 10px rgba(0, 0, 0, 1);
+      text-align: center;
+    }
+
+    button {
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-size: clamp(18px, 4vw, 28px);
+      padding: 18px 45px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      transition: transform 0.2s;
+      pointer-events: all;
+      margin: 10px;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .controls-info {
+      margin: 20px 0;
+      text-align: center;
+      font-size: clamp(14px, 3vw, 18px);
+      line-height: 1.8;
+      max-width: 600px;
+    }
+
+    #countdown {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(80px, 20vw, 150px);
+      color: #FFD700;
+      text-shadow: 6px 6px 12px rgba(0, 0, 0, 1);
+      z-index: 50;
+      animation: pulse 1s ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.2); }
+    }
+
+    #loadingScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #FFD700;
+      z-index: 200;
+    }
+
+    .spinner {
+      border: 8px solid rgba(255, 215, 0, 0.3);
+      border-top: 8px solid #FFD700;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (min-width: 768px) {
+      .joystick, .action-buttons {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <div id="loadingScreen">
+      <div class="spinner"></div>
+      <h2>Loading 3D Racing Game...</h2>
+    </div>
+
+    <div id="ui">
+      <div class="ui-panel">
+        <div id="position">1st</div>
+        <div id="lapCounter">Lap: 1/3</div>
+        <div id="speedometer">Speed: 0 km/h</div>
+      </div>
+      <div id="items"></div>
+    </div>
+
+    <!-- Touch Controls for Mobile -->
+    <div id="touchControls">
+      <div class="joystick" id="joystick">
+        <div class="joystick-handle" id="joystickHandle"></div>
+      </div>
+      <div class="action-buttons">
+        <div class="action-btn" id="accelerateBtn">GAS</div>
+        <div class="action-btn brake" id="brakeBtn">BRAKE</div>
+      </div>
+    </div>
+
+    <div id="startScreen">
+      <h1>🏎️ MARIO KART 3D 🏎️</h1>
+      <div class="controls-info">
+        <div><strong>Desktop:</strong> Arrow Keys to drive, SPACE for items</div>
+        <div><strong>Mobile:</strong> Joystick to steer, buttons to accelerate/brake</div>
+        <div style="margin-top: 15px; color: #FFD700;">🏁 Complete 3 laps and finish first! 🏁</div>
+      </div>
+      <button onclick="startGame()">START RACE</button>
+    </div>
+
+    <div id="gameOverScreen" class="hidden">
+      <h1 id="finalPosition"></h1>
+      <div style="font-size: clamp(20px, 5vw, 36px); margin: 20px 0;" id="finalTime"></div>
+      <button onclick="restartGame()">RACE AGAIN</button>
+    </div>
+
+    <div id="countdown" class="hidden"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // Game state
+    let scene, camera, renderer;
+    let gameState = 'loading'; // loading, menu, countdown, playing, finished
+    let karts = [];
+    let player;
+    let track;
+    let raceStartTime = 0;
+
+    // Input
+    const keys = {};
+    const touch = {
+      accelerate: false,
+      brake: false,
+      steerX: 0,
+      steerY: 0
+    };
+
+    // Track configuration
+    const trackConfig = {
+      radius: 150,
+      width: 40,
+      segments: 64,
+      laps: 3
+    };
+
+    // Kart class
+    class Kart {
+      constructor(color, name, isPlayer = false, startOffset = 0) {
+        this.color = color;
+        this.name = name;
+        this.isPlayer = isPlayer;
+
+        // Create 3D model
+        this.group = new THREE.Group();
+
+        // Kart body
+        const bodyGeometry = new THREE.BoxGeometry(3, 1.5, 4);
+        const bodyMaterial = new THREE.MeshPhongMaterial({ color: color });
+        this.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        this.body.position.y = 1;
+        this.group.add(this.body);
+
+        // Wheels
+        const wheelGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.4, 16);
+        const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 });
+
+        this.wheels = [];
+        const wheelPositions = [
+          [-1.5, 0.6, 1.5],
+          [1.5, 0.6, 1.5],
+          [-1.5, 0.6, -1.5],
+          [1.5, 0.6, -1.5]
+        ];
+
+        wheelPositions.forEach(pos => {
+          const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+          wheel.rotation.z = Math.PI / 2;
+          wheel.position.set(...pos);
+          this.wheels.push(wheel);
+          this.group.add(wheel);
+        });
+
+        // Driver head
+        const headGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+        const headMaterial = new THREE.MeshPhongMaterial({ color: 0xFFD1A4 });
+        this.head = new THREE.Mesh(headGeometry, headMaterial);
+        this.head.position.set(0, 2.5, 0.5);
+        this.group.add(this.head);
+
+        // Racing stats
+        this.angle = startOffset;
+        this.distance = 0;
+        this.speed = 0;
+        this.maxSpeed = isPlayer ? 1.2 : 1.0;
+        this.acceleration = 0.015;
+        this.friction = 0.97;
+        this.turnSpeed = 0.02;
+        this.lap = 1;
+        this.checkpoint = 0;
+        this.finished = false;
+        this.finishTime = 0;
+
+        // Item
+        this.item = null;
+        this.itemCooldown = 0;
+
+        // AI
+        this.aiTimer = Math.random() * 100;
+        this.aiVariation = (Math.random() - 0.5) * 0.3;
+
+        scene.add(this.group);
+        this.updatePosition();
+      }
+
+      updatePosition() {
+        const x = Math.cos(this.angle) * trackConfig.radius;
+        const z = Math.sin(this.angle) * trackConfig.radius;
+        this.group.position.set(x, 0, z);
+        this.group.rotation.y = -this.angle + Math.PI / 2;
+      }
+
+      update() {
+        if (this.finished || gameState !== 'playing') return;
+
+        if (this.isPlayer) {
+          // Player controls
+          const isMobile = window.innerWidth < 768;
+          const forward = isMobile ? touch.accelerate : keys.ArrowUp;
+          const backward = isMobile ? touch.brake : keys.ArrowDown;
+          const left = isMobile ? touch.steerX < -0.3 : keys.ArrowLeft;
+          const right = isMobile ? touch.steerX > 0.3 : keys.ArrowRight;
+
+          if (forward) this.speed += this.acceleration;
+          if (backward) this.speed -= this.acceleration * 0.7;
+
+          if (left) this.angle += this.turnSpeed * Math.max(0.5, Math.abs(this.speed) / this.maxSpeed);
+          if (right) this.angle -= this.turnSpeed * Math.max(0.5, Math.abs(this.speed) / this.maxSpeed);
+
+          // Touch steering strength
+          if (isMobile && Math.abs(touch.steerX) > 0.1) {
+            this.angle -= touch.steerX * this.turnSpeed * 1.5;
+          }
+        } else {
+          // AI controls
+          this.aiTimer += 0.1;
+          this.speed += this.acceleration * (0.9 + this.aiVariation);
+          this.angle -= 0.012 + Math.sin(this.aiTimer) * 0.002;
+        }
+
+        // Apply physics
+        this.speed *= this.friction;
+        this.speed = Math.max(-this.maxSpeed * 0.5, Math.min(this.maxSpeed, this.speed));
+
+        this.angle += this.speed * 0.01;
+        this.distance += Math.abs(this.speed);
+
+        // Update position
+        this.updatePosition();
+
+        // Animate wheels
+        this.wheels.forEach(wheel => {
+          wheel.rotation.x += this.speed * 0.2;
+        });
+
+        // Check lap progress
+        this.checkLapProgress();
+
+        // Item cooldown
+        if (this.itemCooldown > 0) this.itemCooldown--;
+
+        // Random item pickup
+        if (!this.item && Math.random() < 0.001 && gameState === 'playing') {
+          this.pickupItem();
+        }
+      }
+
+      checkLapProgress() {
+        const segmentSize = (Math.PI * 2) / 8;
+        const currentSegment = Math.floor((this.angle % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) / segmentSize);
+
+        if (currentSegment !== this.checkpoint) {
+          if ((this.checkpoint === 7 && currentSegment === 0) || currentSegment === this.checkpoint + 1) {
+            this.checkpoint = currentSegment;
+            if (this.checkpoint === 0) {
+              this.lap++;
+              if (this.lap > trackConfig.laps) {
+                this.finished = true;
+                this.finishTime = Date.now() - raceStartTime;
+                if (this.isPlayer) endRace();
+              }
+            }
+          }
+        }
+      }
+
+      pickupItem() {
+        const items = ['🚀', '🐢', '🍌', '⭐'];
+        this.item = items[Math.floor(Math.random() * items.length)];
+        if (this.isPlayer) updateItemsUI();
+      }
+
+      useItem() {
+        if (!this.item || this.itemCooldown > 0) return;
+
+        switch (this.item) {
+          case '🚀':
+            this.speed = this.maxSpeed * 1.8;
+            break;
+          case '🐢':
+            karts.forEach(k => {
+              if (k !== this && !k.finished) {
+                const dx = k.group.position.x - this.group.position.x;
+                const dz = k.group.position.z - this.group.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist < 30) k.speed *= 0.4;
+              }
+            });
+            break;
+          case '⭐':
+            this.speed = this.maxSpeed * 2;
+            this.maxSpeed *= 1.3;
+            setTimeout(() => {
+              this.maxSpeed /= 1.3;
+            }, 3000);
+            break;
+        }
+
+        this.item = null;
+        this.itemCooldown = 180;
+        if (this.isPlayer) updateItemsUI();
+      }
+    }
+
+    // Initialize Three.js
+    function initThree() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x87CEEB);
+      scene.fog = new THREE.Fog(0x87CEEB, 100, 400);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 60, 80);
+      camera.lookAt(0, 0, 0);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      document.getElementById('gameContainer').appendChild(renderer.domElement);
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(50, 100, 50);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.camera.left = -200;
+      directionalLight.shadow.camera.right = 200;
+      directionalLight.shadow.camera.top = 200;
+      directionalLight.shadow.camera.bottom = -200;
+      scene.add(directionalLight);
+
+      // Ground
+      const groundGeometry = new THREE.PlaneGeometry(500, 500);
+      const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x2d5016 });
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // Track
+      const trackGeometry = new THREE.RingGeometry(
+        trackConfig.radius - trackConfig.width / 2,
+        trackConfig.radius + trackConfig.width / 2,
+        trackConfig.segments
+      );
+      const trackMaterial = new THREE.MeshPhongMaterial({
+        color: 0x404040,
+        side: THREE.DoubleSide
+      });
+      track = new THREE.Mesh(trackGeometry, trackMaterial);
+      track.rotation.x = -Math.PI / 2;
+      track.position.y = 0.1;
+      track.receiveShadow = true;
+      scene.add(track);
+
+      // Track edges
+      const edgeGeometry = new THREE.TorusGeometry(trackConfig.radius - trackConfig.width / 2, 2, 16, 100);
+      const edgeMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+      const innerEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+      innerEdge.rotation.x = Math.PI / 2;
+      innerEdge.position.y = 1;
+      scene.add(innerEdge);
+
+      const outerEdge = innerEdge.clone();
+      outerEdge.scale.set(
+        (trackConfig.radius + trackConfig.width / 2) / (trackConfig.radius - trackConfig.width / 2),
+        (trackConfig.radius + trackConfig.width / 2) / (trackConfig.radius - trackConfig.width / 2),
+        1
+      );
+      scene.add(outerEdge);
+
+      // Start/Finish line
+      const finishLineGeometry = new THREE.PlaneGeometry(trackConfig.width, 5);
+      const finishLineMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        side: THREE.DoubleSide
+      });
+      const finishLine = new THREE.Mesh(finishLineGeometry, finishLineMaterial);
+      finishLine.rotation.x = -Math.PI / 2;
+      finishLine.position.set(trackConfig.radius, 0.2, 0);
+      scene.add(finishLine);
+
+      // Create karts
+      const colors = [0xFF0000, 0x00FF00, 0xFFFF00, 0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFA500, 0x800080];
+      const names = ['Mario', 'Luigi', 'Peach', 'Toad', 'Yoshi', 'Bowser', 'DK', 'Wario'];
+
+      for (let i = 0; i < 8; i++) {
+        const kart = new Kart(colors[i], names[i], i === 0, i * 0.1);
+        karts.push(kart);
+      }
+
+      player = karts[0];
+
+      // Handle window resize
+      window.addEventListener('resize', onWindowResize);
+
+      gameState = 'menu';
+      document.getElementById('loadingScreen').classList.add('hidden');
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Update UI
+    function updateUI() {
+      const sortedKarts = [...karts].sort((a, b) => {
+        if (a.lap !== b.lap) return b.lap - a.lap;
+        return b.distance - a.distance;
+      });
+
+      const pos = sortedKarts.indexOf(player) + 1;
+      const suffix = ['st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th'];
+      document.getElementById('position').textContent = pos + suffix[pos - 1];
+      document.getElementById('lapCounter').textContent = `Lap: ${Math.min(player.lap, trackConfig.laps)}/${trackConfig.laps}`;
+      document.getElementById('speedometer').textContent = `Speed: ${Math.round(Math.abs(player.speed) * 100)} km/h`;
+    }
+
+    function updateItemsUI() {
+      const itemsDiv = document.getElementById('items');
+      itemsDiv.innerHTML = '';
+      if (player.item) {
+        const slot = document.createElement('div');
+        slot.className = 'item-slot';
+        slot.textContent = player.item;
+        slot.onclick = () => player.useItem();
+        itemsDiv.appendChild(slot);
+      }
+    }
+
+    // Game loop
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (gameState === 'playing') {
+        karts.forEach(kart => kart.update());
+        updateUI();
+
+        // Camera follow player
+        const camDistance = 30;
+        const camHeight = 15;
+        const targetX = player.group.position.x - Math.cos(player.angle) * camDistance;
+        const targetZ = player.group.position.z - Math.sin(player.angle) * camDistance;
+
+        camera.position.x += (targetX - camera.position.x) * 0.1;
+        camera.position.z += (targetZ - camera.position.z) * 0.1;
+        camera.position.y = camHeight;
+        camera.lookAt(player.group.position);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Game controls
+    window.startGame = function() {
+      document.getElementById('startScreen').classList.add('hidden');
+      gameState = 'countdown';
+      const countdownEl = document.getElementById('countdown');
+      countdownEl.classList.remove('hidden');
+
+      let count = 3;
+      countdownEl.textContent = count;
+
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.textContent = count;
+        } else if (count === 0) {
+          countdownEl.textContent = 'GO!';
+        } else {
+          countdownEl.classList.add('hidden');
+          gameState = 'playing';
+          raceStartTime = Date.now();
+          clearInterval(interval);
+        }
+      }, 1000);
+    };
+
+    function endRace() {
+      gameState = 'finished';
+      const sortedKarts = [...karts].filter(k => k.finished).sort((a, b) => a.finishTime - b.finishTime);
+      const pos = sortedKarts.indexOf(player) + 1;
+      const suffix = ['st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th'];
+
+      document.getElementById('finalPosition').textContent = `${pos}${suffix[pos - 1]} Place!`;
+      document.getElementById('finalTime').textContent = `Time: ${(player.finishTime / 1000).toFixed(2)}s`;
+      document.getElementById('gameOverScreen').classList.remove('hidden');
+    }
+
+    window.restartGame = function() {
+      document.getElementById('gameOverScreen').classList.add('hidden');
+
+      karts.forEach((kart, i) => {
+        kart.angle = i * 0.1;
+        kart.distance = 0;
+        kart.speed = 0;
+        kart.lap = 1;
+        kart.checkpoint = 0;
+        kart.finished = false;
+        kart.finishTime = 0;
+        kart.item = null;
+        kart.itemCooldown = 0;
+        kart.updatePosition();
+      });
+
+      startGame();
+    };
+
+    // Keyboard controls
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === ' ') {
+        e.preventDefault();
+        player.useItem();
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      keys[e.key] = false;
+    });
+
+    // Touch controls
+    const joystick = document.getElementById('joystick');
+    const joystickHandle = document.getElementById('joystickHandle');
+    let joystickActive = false;
+
+    joystick.addEventListener('touchstart', handleJoystickStart);
+    joystick.addEventListener('touchmove', handleJoystickMove);
+    joystick.addEventListener('touchend', handleJoystickEnd);
+
+    function handleJoystickStart(e) {
+      e.preventDefault();
+      joystickActive = true;
+    }
+
+    function handleJoystickMove(e) {
+      if (!joystickActive) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const rect = joystick.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      let deltaX = touch.clientX - centerX;
+      let deltaY = touch.clientY - centerY;
+
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const maxDistance = rect.width / 2 - 30;
+
+      if (distance > maxDistance) {
+        const angle = Math.atan2(deltaY, deltaX);
+        deltaX = Math.cos(angle) * maxDistance;
+        deltaY = Math.sin(angle) * maxDistance;
+      }
+
+      joystickHandle.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+
+      window.touch.steerX = deltaX / maxDistance;
+      window.touch.steerY = deltaY / maxDistance;
+    }
+
+    function handleJoystickEnd(e) {
+      e.preventDefault();
+      joystickActive = false;
+      joystickHandle.style.transform = 'translate(-50%, -50%)';
+      window.touch.steerX = 0;
+      window.touch.steerY = 0;
+    }
+
+    window.touch = touch;
+
+    document.getElementById('accelerateBtn').addEventListener('touchstart', e => {
+      e.preventDefault();
+      touch.accelerate = true;
+    });
+
+    document.getElementById('accelerateBtn').addEventListener('touchend', e => {
+      e.preventDefault();
+      touch.accelerate = false;
+    });
+
+    document.getElementById('brakeBtn').addEventListener('touchstart', e => {
+      e.preventDefault();
+      touch.brake = true;
+    });
+
+    document.getElementById('brakeBtn').addEventListener('touchend', e => {
+      e.preventDefault();
+      touch.brake = false;
+    });
+
+    // Initialize
+    initThree();
+    animate();
+  </script>
+</body>
+</html>

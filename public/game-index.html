@@ -3,27 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mario Kart 3D Racing</title>
-  <script>
-    // Immediate redirect to the 3D game
-    window.location.href = 'mario-kart-3d.html';
-  </script>
+  <meta http-equiv="refresh" content="0; url=mario-kart-3d.html">
+  <title>Mario Kart 3D - Loading...</title>
   <style>
     body {
       margin: 0;
       padding: 0;
       background: #000;
       color: #FFD700;
-      font-family: 'Arial Black', Arial, sans-serif;
+      font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
       text-align: center;
     }
+    .loader {
+      font-size: 24px;
+    }
   </style>
 </head>
 <body>
-  <h1>🏎️ Loading Mario Kart 3D... 🏎️</h1>
+  <div class="loader">
+    <h1>🏎️ Mario Kart 3D 🏎️</h1>
+    <p>Loading game...</p>
+  </div>
+  <script>
+    // Immediate redirect for mobile
+    window.location.href = 'mario-kart-3d.html';
+  </script>
 </body>
 </html>
