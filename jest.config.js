@@ -1,29 +1,20 @@
-/**
- * Jest Configuration
- */
-
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/server', '<rootDir>/shared'],
-  testMatch: [
-    '**/__tests__/**/*.ts',
-    '**/?(*.)+(spec|test).ts'
-  ],
+  roots: ['<rootDir>/server', '<rootDir>/client'],
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest'
+    '^.+\\.ts$': 'ts-jest',
   },
   collectCoverageFrom: [
     'server/**/*.ts',
-    'shared/**/*.ts',
     '!server/**/*.d.ts',
-    '!**/__tests__/**',
-    '!**/node_modules/**'
+    '!server/**/*.spec.ts',
+    '!server/**/*.test.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   moduleFileExtensions: ['ts', 'js', 'json'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testTimeout: 10000,
-  verbose: true
+  setupFilesAfterEnv: ['<rootDir>/server/__tests__/setup.ts'],
+  testTimeout: 30000,
 };

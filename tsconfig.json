@@ -5,27 +5,34 @@
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./",
+    "removeComments": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node", "jest"]
   },
   "include": [
     "server/**/*",
-    "shared/**/*"
+    "client/**/*",
+    "prisma/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "public"
+    "**/*.spec.ts",
+    "**/*.test.ts"
   ]
 }

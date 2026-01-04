@@ -1,21 +1,26 @@
 /**
- * Redis Configuration
+ * REDIS CONFIGURATION
+ * Redis client for caching and sessions
  */
 
 import Redis from 'ioredis';
 
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+export const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 3,
-  retryStrategy(times: number) {
+  retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);
     return delay;
   },
-};
-
-export const redis = new Redis(redisConfig);
+  reconnectOnError(err) {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) {
+      return true;
+    }
+    return false;
+  },
+});
 
 redis.on('connect', () => {
   console.log('✅ Redis connected');
@@ -23,6 +28,15 @@ redis.on('connect', () => {
 
 redis.on('error', (err) => {
   console.error('❌ Redis error:', err);
+});
+
+redis.on('close', () => {
+  console.log('🔌 Redis connection closed');
+});
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await redis.quit();
 });
 
 export default redis;
