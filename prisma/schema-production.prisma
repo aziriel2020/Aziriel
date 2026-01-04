@@ -22,7 +22,10 @@ model User {
   passwordHash      String?   // bcrypt hash
   firstName         String?
   lastName          String?
+  displayName       String?   // For ActivityPub
   avatar            String?
+  avatarUrl         String?   // For ActivityPub
+  bannerUrl         String?   // For ActivityPub
   bio               String?
 
   // Email Verification
@@ -44,6 +47,10 @@ model User {
   githubId          String?   @unique
   discordId         String?   @unique
   twitterId         String?   @unique
+
+  // ActivityPub (Federation)
+  publicKey         String?   @db.Text // RSA public key for ActivityPub
+  privateKey        String?   @db.Text // RSA private key for ActivityPub signatures
 
   // Subscription & Billing
   stripeCustomerId  String?   @unique
@@ -724,4 +731,353 @@ enum JobStatus {
   PAUSED
 }
 
-// Continue in next message due to length...
+// ============================================================================
+// NEXUS PLATFORM - POST-FEED ERA FEATURES
+// ============================================================================
+
+// Personal Digital Twin (PDT)
+model PersonalDigitalTwin {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+
+  // Configuration
+  modelName         String   @default("llama-4-7b") // Local LLM
+  personality       Json?    // Personality traits
+  privacySettings   Json?    // Privacy preferences
+
+  // Memory
+  localCollectionId String   // Chroma DB collection
+  cloudCollectionId String?  // Pinecone collection (optional)
+  syncEnabled       Boolean  @default(false)
+  documentCount     Int      @default(0)
+
+  // Goals (Stated vs Revealed)
+  statedGoals       Json     // Primary goals user explicitly sets
+  avoidTopics       String[] // Topics to filter out
+  prioritizeTopics  String[] // Topics to prioritize
+
+  // Performance Metrics
+  contentFiltered   Int      @default(0)
+  slopBlocked       Int      @default(0)
+  goalAlignment     Float    @default(0.0) // 0-1
+
+  // Settings
+  maxDailyScreenTime Int?    // minutes
+  focusHours        Json?    // Array of time ranges
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("personal_digital_twins")
+}
+
+// Agent-to-Agent Collaboration
+model AgentCollaboration {
+  id                  String   @id
+  initiatorUserId     String
+  participantUserIds  String[] // Array of participant user IDs
+
+  goal                String   @db.Text
+  context             Json?
+
+  status              String   @default("pending") // pending, negotiating, completed, failed
+  result              Json?    // Collaboration result
+  messages            Json     @default("[]") // Array of collaboration messages
+
+  createdAt           DateTime @default(now())
+  completedAt         DateTime?
+
+  @@index([initiatorUserId])
+  @@index([status])
+  @@map("agent_collaborations")
+}
+
+// Generative UI
+model GeneratedUI {
+  id              String   @id
+  userId          String
+  conversationId  String
+
+  components      Json     // Array of UI components
+  layout          String   // stack, grid, sidebar, fullscreen, floating
+  theme           String?  @default("light")
+
+  metadata        Json     // confidence, reasoning, generatedAt
+
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([conversationId])
+  @@map("generated_uis")
+}
+
+// Spatial Worlds
+model SpatialWorld {
+  id              String   @id
+  name            String
+  description     String?  @db.Text
+  creatorId       String
+
+  sceneData       Json     // Environment, objects, audio
+  participants    Json     @default("[]") // Array of participants with avatars
+  settings        Json     // maxParticipants, isPublic, physics, etc.
+
+  status          String   @default("ready") // generating, ready, active, archived
+
+  createdAt       DateTime @default(now())
+  lastActiveAt    DateTime @default(now())
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("spatial_worlds")
+}
+
+// Avatars
+model Avatar {
+  id          String   @id
+  userId      String   @unique
+
+  modelUrl    String   // URL to 3D avatar model
+  textureUrl  String?
+  animations  Json     // idle, walk, talk, gesture animations
+  voice       Json?    // voiceId, pitch, speed
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("avatars")
+}
+
+// Translation Sessions
+model TranslationSession {
+  id            String   @id
+  participants  Json     // Array of {userId, language, voiceProfile}
+
+  status        String   @default("active") // active, paused, ended
+  messages      Json     @default("[]") // Translation messages
+
+  createdAt     DateTime @default(now())
+  endedAt       DateTime?
+
+  @@index([status])
+  @@map("translation_sessions")
+}
+
+// Voice Profiles
+model VoiceProfile {
+  id                String   @id
+  userId            String   @unique
+
+  voiceId           String   // ElevenLabs voice ID
+  samples           String[] // URLs to voice samples
+  characteristics   Json     // pitch, speed, tone, accent
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("voice_profiles")
+}
+
+model VoiceTranslation {
+  id                String   @id @default(uuid())
+  userId            String
+  sessionId         String?
+
+  sourceLanguage    String
+  targetLanguage    String
+  sourceText        String   @db.Text
+  translatedText    String   @db.Text
+
+  latency           Int      // milliseconds
+  confidence        Float
+  voiceCloned       Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("voice_translations")
+}
+
+model UserAudioSample {
+  id          String   @id @default(uuid())
+  userId      String
+
+  audioUrl    String
+  duration    Float?   // seconds
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("user_audio_samples")
+}
+
+// Trust & Verification
+model TrustScore {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+
+  overall             Float    // 0-1
+  components          Json     // verifiedIdentity, contentAuthenticity, etc.
+
+  lastUpdated         DateTime @default(now())
+
+  @@map("trust_scores")
+}
+
+model VerifiableCredential {
+  id              String   @id
+  type            String[] // Array of credential types
+
+  issuerDid       String
+  subjectDid      String
+
+  credentialData  Json     // Full credential object
+
+  issuanceDate    DateTime
+  expirationDate  DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([subjectDid])
+  @@index([issuerDid])
+  @@map("verifiable_credentials")
+}
+
+model TrustAttestation {
+  id            String   @id
+  fromUserId    String
+  toUserId      String
+
+  type          String   // trust, distrust
+  category      String   @default("general") // general, expertise, fact-checking
+  weight        Float    @default(1.0)
+  reason        String?  @db.Text
+
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime?
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("trust_attestations")
+}
+
+model CommunityNote {
+  id            String   @id
+  contentId     String
+  authorId      String
+
+  text          String   @db.Text
+  rating        String   // helpful, not-helpful, misleading
+  evidence      String[] // URLs to evidence
+
+  votesHelpful    Int    @default(0)
+  votesNotHelpful Int    @default(0)
+
+  status        String   @default("pending") // pending, approved, rejected
+
+  createdAt     DateTime @default(now())
+
+  @@index([contentId])
+  @@index([authorId])
+  @@index([status])
+  @@map("community_notes")
+}
+
+model UserContent {
+  id            String   @id @default(uuid())
+  userId        String
+
+  contentType   String   // post, video, image, etc.
+  contentUrl    String?
+  contentData   Json?
+
+  c2paManifest  Json?    // C2PA content provenance manifest
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@map("user_content")
+}
+
+model UserAction {
+  id          String   @id @default(uuid())
+  userId      String
+
+  actionType  String   // like, comment, share, etc.
+  targetType  String   // post, video, user, etc.
+  targetId    String
+
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([actionType])
+  @@map("user_actions")
+}
+
+// ActivityPub Federation
+model FederatedPost {
+  id              String   @id
+  authorActorId   String   // Actor ID (URL) of author
+
+  content         String   @db.Text
+  contentHtml     String?  @db.Text
+
+  publishedAt     DateTime
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([authorActorId])
+  @@index([publishedAt])
+  @@map("federated_posts")
+}
+
+model FederatedLike {
+  id          String   @id @default(uuid())
+  actorId     String   // Actor ID who liked
+  objectId    String   // Object ID that was liked
+
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, objectId])
+  @@index([actorId])
+  @@index([objectId])
+  @@map("federated_likes")
+}
+
+model FederatedAnnounce {
+  id          String   @id @default(uuid())
+  actorId     String   // Actor ID who announced
+  objectId    String   // Object ID that was announced
+
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, objectId])
+  @@index([actorId])
+  @@index([objectId])
+  @@map("federated_announces")
+}
+
+model Follow {
+  id                String   @id @default(uuid())
+  followerActorId   String   // Actor ID of follower
+  followingUsername String?  // Local username (if following local user)
+  followingActorId  String?  // Actor ID (if following remote user)
+
+  status            String   @default("pending") // pending, accepted, rejected
+
+  createdAt         DateTime @default(now())
+
+  @@unique([followerActorId, followingUsername])
+  @@unique([followerActorId, followingActorId])
+  @@index([followerActorId])
+  @@index([followingUsername])
+  @@index([followingActorId])
+  @@map("follows")
+}
+
+// Update User model to include ActivityPub fields
+// Add to User model: publicKey, privateKey, displayName, bannerUrl
