@@ -21,6 +21,7 @@ import {
   createCollaborationSchema,
   exportVideoSchema,
 } from '../validators/flow.validators';
+import videoGenService from '../services/video-generation.service';
 
 const router = express.Router();
 
@@ -32,11 +33,20 @@ router.post('/quick-start/text-to-film', validate(textToFilmSchema), async (req:
   try {
     const { userId, prompt, style, duration, quality } = req.body;
 
+    // Generate video using production AI services
+    const result = await videoGenService.generateVideo({
+      userId,
+      prompt,
+      style,
+      duration,
+      quality,
+      model: 'auto', // Auto-select best model
+    });
+
     res.json({
       success: true,
-      jobId: `job_${Date.now()}`,
-      estimatedTime: duration * 60, // seconds
-      message: 'Video generation started',
+      ...result,
+      message: 'Video generation started with ' + result.model,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -169,6 +179,30 @@ router.get('/project/:projectId', async (req: Request, res: Response) => {
         name: 'Sample Project',
         status: 'draft',
       },
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get video generation job status
+ * GET /api/flow/job/:jobId/status
+ */
+router.get('/job/:jobId/status', async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const { model } = req.query;
+
+    if (!model) {
+      return res.status(400).json({ error: 'Model parameter required' });
+    }
+
+    const status = await videoGenService.getJobStatus(jobId, model as string);
+
+    res.json({
+      success: true,
+      ...status,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
