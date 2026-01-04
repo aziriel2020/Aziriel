@@ -97,6 +97,7 @@ model User {
   notifications     Notification[]
   webhooks          Webhook[]
   assets            Asset[]
+  collections       Collection[]
 
   @@index([email])
   @@index([username])
@@ -314,13 +315,21 @@ model Project {
   name        String
   description String?
   thumbnail   String?
+  type        String?  @default("other") // short-film, commercial, music-video, social
 
   // Organization
   folderId    String?
   tags        String[]
 
+  // Flow Studio
+  storyboard  Json?    // Storyboard data
+  timelineId  String?  // Reference to Timeline
+  collaborators String[] // User IDs with access
+  status      String?  @default("draft") // draft, in-progress, rendering, completed
+
   // Settings
   settings    Json?
+  metadata    Json?
 
   // Status
   isPublic    Boolean  @default(false)
@@ -480,16 +489,27 @@ model Asset {
   url         String
   thumbnailUrl String?
 
+  size        BigInt?     @default(0)
+  duration    Float?      // For video/audio
   fileSize    BigInt?
   mimeType    String?
 
   // Organization
   folderId    String?
   tags        String[]
+  collections String[]    // Collection IDs this asset belongs to
+
+  // AI Generation
+  aiGenerated Boolean     @default(false)
+  generationSettings Json?
+
+  // Usage tracking
+  usageCount  Int         @default(0)
 
   metadata    Json?
 
   createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@index([userId])
   @@index([projectId])
@@ -505,7 +525,113 @@ enum AssetType {
   FONT
   PRESET
   TEMPLATE
+  EFFECT
+  MODEL
   OTHER
+}
+
+// ============================================================================
+// FLOW STUDIO FEATURES (Google Flow-style)
+// ============================================================================
+
+model Storyboard {
+  id            String   @id @default(uuid())
+  projectId     String
+  userId        String
+
+  name          String
+  scenes        Json     // Array of Scene objects
+  totalDuration Int      @default(0) // milliseconds
+  aspectRatio   String   @default("16:9")
+  resolution    String   @default("1080p")
+  frameRate     Int      @default(24)
+
+  metadata      Json?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("storyboards")
+}
+
+model Timeline {
+  id                String   @id @default(uuid())
+  projectId         String
+  userId            String
+
+  name              String
+  tracks            Json     // Array of TimelineTrack objects
+  duration          Int      @default(0) // milliseconds
+  zoom              Float    @default(1.0)
+  playheadPosition  Int      @default(0)
+
+  settings          Json?    // resolution, frameRate, aspectRatio, etc.
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("timelines")
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String
+
+  name        String
+  description String?
+  assetIds    String[] // References to Asset IDs
+  color       String?
+  icon        String?
+  shared      Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("collections")
+}
+
+model Comment {
+  id                String   @id @default(uuid())
+  projectId         String
+  userId            String
+  userName          String
+
+  text              String   @db.Text
+  timelinePosition  Int?     // milliseconds on timeline
+  clipId            String?
+
+  resolved          Boolean  @default(false)
+  replies           Json?    // Array of reply comments
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model ProjectVersion {
+  id          String   @id @default(uuid())
+  projectId   String
+
+  version     Int
+  name        String
+  description String?
+  userId      String
+
+  snapshot    Json     // Complete project state
+
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@map("project_versions")
 }
 
 // ============================================================================
@@ -573,6 +699,7 @@ model Job {
 
 enum JobType {
   VIDEO_GENERATION
+  VIDEO_PROCESSING
   VIDEO_TRANSLATION
   VIDEO_TRANSCRIPTION
   HIGHLIGHT_EXTRACTION
