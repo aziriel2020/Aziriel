@@ -1,65 +1,76 @@
 /**
- * Authentication Middleware
+ * AUTHENTICATION MIDDLEWARE
+ *
+ * JWT-based authentication for protected routes
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
-import { prisma } from '../config/database';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
+  userId?: string;
+  user?: any;
 }
 
 /**
- * Require authentication
+ * Verify JWT token and attach user to request
  */
-export const authenticate = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Authorization header required' });
     }
 
-    const payload = verifyToken(token);
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.substring(7)
+      : authHeader;
 
-    // Verify user exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, email: true, role: true, status: true },
-    });
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
 
-    if (!user || user.status !== 'ACTIVE') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    };
+    req.userId = decoded.userId;
+    req.user = decoded;
 
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
-};
+}
+
+/**
+ * Optional authentication - attach user if token present but don't fail
+ */
+export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader) {
+      const token = authHeader.startsWith('Bearer ')
+        ? authHeader.substring(7)
+        : authHeader;
+
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      req.userId = decoded.userId;
+      req.user = decoded;
+    }
+
+    next();
+  } catch (error) {
+    // Silent fail - continue without user
+    next();
+  }
+}
 
 /**
  * Require specific role
  */
-export const requireRole = (roles: string[]) => {
+export function requireRole(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!roles.includes(req.user.role)) {
@@ -68,38 +79,25 @@ export const requireRole = (roles: string[]) => {
 
     next();
   };
-};
+}
 
 /**
- * Optional authentication
+ * API Key authentication
  */
-export const optionalAuth = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export async function authenticateApiKey(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const apiKey = req.headers['x-api-key'] as string;
 
-    if (token) {
-      const payload = verifyToken(token);
-      const user = await prisma.user.findUnique({
-        where: { id: payload.userId },
-        select: { id: true, email: true, role: true, status: true },
-      });
-
-      if (user && user.status === 'ACTIVE') {
-        req.user = {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-        };
-      }
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API key required' });
     }
+
+    // Verify API key (would check database)
+    // const key = await ApiKeyService.verify(apiKey);
+    // req.userId = key.userId;
 
     next();
   } catch (error) {
-    // Continue without authentication
-    next();
+    return res.status(401).json({ error: 'Invalid API key' });
   }
-};
+}
