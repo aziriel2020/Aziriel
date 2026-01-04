@@ -10,6 +10,8 @@
 
 import express, { Request, Response } from 'express';
 import { PersonalDigitalTwinService } from '../../services/nexus/personal-digital-twin.service';
+import { validate } from '../../middleware/validation.middleware';
+import { initializePDTSchema, filterContentSchema } from '../../validators/nexus.validators';
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ const router = express.Router();
  * Initialize PDT for user
  * POST /api/nexus/pdt/initialize
  */
-router.post('/initialize', async (req: Request, res: Response) => {
+router.post('/initialize', validate(initializePDTSchema), async (req: Request, res: Response) => {
   try {
     const { userId, config, initialGoals } = req.body;
 
@@ -54,7 +56,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
  * Filter content batch
  * POST /api/nexus/pdt/filter
  */
-router.post('/filter', async (req: Request, res: Response) => {
+router.post('/filter', validate(filterContentSchema), async (req: Request, res: Response) => {
   try {
     const { pdtId, contentBatch } = req.body;
 

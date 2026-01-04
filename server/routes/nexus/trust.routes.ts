@@ -11,6 +11,8 @@
 
 import express, { Request, Response } from 'express';
 import { WebOfTrustService } from '../../services/nexus/web-of-trust.service';
+import { validate } from '../../middleware/validation.middleware';
+import { issueCredentialSchema, createAttestationSchema, createNoteSchema } from '../../validators/nexus.validators';
 
 const router = express.Router();
 
@@ -50,7 +52,7 @@ router.post('/score/:userId/calculate', async (req: Request, res: Response) => {
  * Issue verifiable credential
  * POST /api/nexus/trust/credential/issue
  */
-router.post('/credential/issue', async (req: Request, res: Response) => {
+router.post('/credential/issue', validate(issueCredentialSchema), async (req: Request, res: Response) => {
   try {
     const { userId, type, credentialSubject, expirationDays } = req.body;
 
@@ -125,7 +127,7 @@ router.get('/c2pa/:contentId/verify', async (req: Request, res: Response) => {
  * Create trust attestation
  * POST /api/nexus/trust/attestation
  */
-router.post('/attestation', async (req: Request, res: Response) => {
+router.post('/attestation', validate(createAttestationSchema), async (req: Request, res: Response) => {
   try {
     const { fromUserId, toUserId, type, category, weight, reason, expirationDays } = req.body;
 
@@ -149,7 +151,7 @@ router.post('/attestation', async (req: Request, res: Response) => {
  * Create community note
  * POST /api/nexus/trust/note
  */
-router.post('/note', async (req: Request, res: Response) => {
+router.post('/note', validate(createNoteSchema), async (req: Request, res: Response) => {
   try {
     const { contentId, authorId, text, rating, evidence } = req.body;
 

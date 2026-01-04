@@ -11,6 +11,16 @@
  */
 
 import express, { Request, Response } from 'express';
+import { validate } from '../middleware/validation.middleware';
+import {
+  textToFilmSchema,
+  createSceneSchema,
+  ingredientsToVideoSchema,
+  createTimelineSchema,
+  extendVideoSchema,
+  createCollaborationSchema,
+  exportVideoSchema,
+} from '../validators/flow.validators';
 
 const router = express.Router();
 
@@ -18,7 +28,7 @@ const router = express.Router();
  * Quick start - Text to Film
  * POST /api/flow/quick-start/text-to-film
  */
-router.post('/quick-start/text-to-film', async (req: Request, res: Response) => {
+router.post('/quick-start/text-to-film', validate(textToFilmSchema), async (req: Request, res: Response) => {
   try {
     const { userId, prompt, style, duration, quality } = req.body;
 
@@ -37,7 +47,7 @@ router.post('/quick-start/text-to-film', async (req: Request, res: Response) => 
  * Scene Builder - Create scene
  * POST /api/flow/scene-builder/create
  */
-router.post('/scene-builder/create', async (req: Request, res: Response) => {
+router.post('/scene-builder/create', validate(createSceneSchema), async (req: Request, res: Response) => {
   try {
     const { userId, projectId, sceneData } = req.body;
 
@@ -55,7 +65,7 @@ router.post('/scene-builder/create', async (req: Request, res: Response) => {
  * Ingredients to Video
  * POST /api/flow/ingredients/create
  */
-router.post('/ingredients/create', async (req: Request, res: Response) => {
+router.post('/ingredients/create', validate(ingredientsToVideoSchema), async (req: Request, res: Response) => {
   try {
     const { userId, ingredients, settings } = req.body;
 
@@ -74,7 +84,7 @@ router.post('/ingredients/create', async (req: Request, res: Response) => {
  * Timeline - Create timeline
  * POST /api/flow/timeline/create
  */
-router.post('/timeline/create', async (req: Request, res: Response) => {
+router.post('/timeline/create', validate(createTimelineSchema), async (req: Request, res: Response) => {
   try {
     const { userId, projectId, timelineData } = req.body;
 
@@ -92,7 +102,7 @@ router.post('/timeline/create', async (req: Request, res: Response) => {
  * Video Extension
  * POST /api/flow/extend
  */
-router.post('/extend', async (req: Request, res: Response) => {
+router.post('/extend', validate(extendVideoSchema), async (req: Request, res: Response) => {
   try {
     const { userId, videoId, direction, duration } = req.body;
 
@@ -111,7 +121,7 @@ router.post('/extend', async (req: Request, res: Response) => {
  * Collaboration - Create session
  * POST /api/flow/collaboration/create
  */
-router.post('/collaboration/create', async (req: Request, res: Response) => {
+router.post('/collaboration/create', validate(createCollaborationSchema), async (req: Request, res: Response) => {
   try {
     const { projectId, userId, collaborators } = req.body;
 
@@ -129,7 +139,7 @@ router.post('/collaboration/create', async (req: Request, res: Response) => {
  * Export video
  * POST /api/flow/export
  */
-router.post('/export', async (req: Request, res: Response) => {
+router.post('/export', validate(exportVideoSchema), async (req: Request, res: Response) => {
   try {
     const { userId, videoId, preset, options } = req.body;
 

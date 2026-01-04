@@ -9,6 +9,8 @@
 
 import express, { Request, Response } from 'express';
 import { GenerativeUIService } from '../../services/nexus/generative-ui.service';
+import { validate } from '../../middleware/validation.middleware';
+import { generateUISchema } from '../../validators/nexus.validators';
 
 const router = express.Router();
 
@@ -16,7 +18,7 @@ const router = express.Router();
  * Generate UI for context
  * POST /api/nexus/genui/generate
  */
-router.post('/generate', async (req: Request, res: Response) => {
+router.post('/generate', validate(generateUISchema), async (req: Request, res: Response) => {
   try {
     const { conversationId, userId, currentTopic, entities, intent, history } = req.body;
 

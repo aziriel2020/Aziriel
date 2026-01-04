@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Production
+dist/
+build/
+*.log
+logs/
+
+# Testing
+coverage/
+.nyc_output
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Prisma
+prisma/.env
+
+# Uploads & Media
+uploads/
+tmp/
+temp/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+Thumbs.db
+
+# SSL Certificates (keep examples, ignore real ones)
+ssl/*.pem
+ssl/*.key
+ssl/*.crt
+!ssl/README.md
+
+# Docker
+docker-compose.override.yml
+
+# Misc
+.cache/
+.next/
+.nuxt/
+.vercel/

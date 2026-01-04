@@ -9,6 +9,8 @@
 
 import express, { Request, Response } from 'express';
 import { AgentCollaborationService } from '../../services/nexus/agent-collaboration.service';
+import { validate } from '../../middleware/validation.middleware';
+import { initiateCollaborationSchema, planDinnerSchema } from '../../validators/nexus.validators';
 
 const router = express.Router();
 
@@ -16,7 +18,7 @@ const router = express.Router();
  * Initiate collaboration
  * POST /api/nexus/collaboration/initiate
  */
-router.post('/initiate', async (req: Request, res: Response) => {
+router.post('/initiate', validate(initiateCollaborationSchema), async (req: Request, res: Response) => {
   try {
     const { initiatorUserId, participantUserIds, goal, context } = req.body;
 
@@ -37,7 +39,7 @@ router.post('/initiate', async (req: Request, res: Response) => {
  * Plan dinner (helper endpoint)
  * POST /api/nexus/collaboration/plan-dinner
  */
-router.post('/plan-dinner', async (req: Request, res: Response) => {
+router.post('/plan-dinner', validate(planDinnerSchema), async (req: Request, res: Response) => {
   try {
     const { userId, friendUserIds, preferredDates, cuisine, budget } = req.body;
 

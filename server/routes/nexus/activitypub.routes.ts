@@ -10,6 +10,8 @@
 
 import express, { Request, Response } from 'express';
 import { ActivityPubService } from '../../services/nexus/activitypub.service';
+import { validate } from '../../middleware/validation.middleware';
+import { createPostSchema, followRemoteActorSchema } from '../../validators/nexus.validators';
 
 const router = express.Router();
 
@@ -190,7 +192,7 @@ router.get('/users/:username/following', async (req: Request, res: Response) => 
  * Create post (Outbox POST)
  * POST /api/nexus/activitypub/post
  */
-router.post('/post', async (req: Request, res: Response) => {
+router.post('/post', validate(createPostSchema), async (req: Request, res: Response) => {
   try {
     const { username, content, attachments, visibility } = req.body;
 
@@ -211,7 +213,7 @@ router.post('/post', async (req: Request, res: Response) => {
  * Follow remote actor
  * POST /api/nexus/activitypub/follow
  */
-router.post('/follow', async (req: Request, res: Response) => {
+router.post('/follow', validate(followRemoteActorSchema), async (req: Request, res: Response) => {
   try {
     const { username, remoteActorId } = req.body;
 

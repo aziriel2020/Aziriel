@@ -23,6 +23,9 @@ import flowRoutes from './routes/flow.routes';
 import nexusRoutes from './routes/nexus';
 import activitypubRoutes from './routes/nexus/activitypub.routes';
 
+// Services
+import { performHealthCheck, livenessProbe, readinessProbe } from './services/health.service';
+
 // Load environment variables
 config();
 
@@ -49,14 +52,42 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ROUTES
 // ============================================================================
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV,
-  });
+// Health check (comprehensive)
+app.get('/health', async (req, res) => {
+  try {
+    const healthStatus = await performHealthCheck();
+
+    const statusCode = healthStatus.status === 'healthy' ? 200 :
+                      healthStatus.status === 'degraded' ? 200 :
+                      503;
+
+    res.status(statusCode).json(healthStatus);
+  } catch (error: any) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Liveness probe (Kubernetes)
+app.get('/health/live', (req, res) => {
+  res.json(livenessProbe());
+});
+
+// Readiness probe (Kubernetes)
+app.get('/health/ready', async (req, res) => {
+  try {
+    const readiness = await readinessProbe();
+    const statusCode = readiness.status === 'ready' ? 200 : 503;
+    res.status(statusCode).json(readiness);
+  } catch (error: any) {
+    res.status(503).json({
+      status: 'not_ready',
+      reason: error.message,
+    });
+  }
 });
 
 // ActivityPub Federation (must be at root level for WebFinger)

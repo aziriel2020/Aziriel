@@ -10,6 +10,8 @@
 
 import express, { Request, Response } from 'express';
 import { SpatialWorldsService } from '../../services/nexus/spatial-worlds.service';
+import { validate, validateAll } from '../../middleware/validation.middleware';
+import { generateWorldSchema, joinWorldSchema, updatePositionSchema } from '../../validators/nexus.validators';
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ const router = express.Router();
  * Generate spatial world
  * POST /api/nexus/spatial/generate
  */
-router.post('/generate', async (req: Request, res: Response) => {
+router.post('/generate', validate(generateWorldSchema), async (req: Request, res: Response) => {
   try {
     const { userId, description, theme, maxParticipants } = req.body;
 
@@ -58,7 +60,7 @@ router.get('/:worldId', async (req: Request, res: Response) => {
  * Join world
  * POST /api/nexus/spatial/:worldId/join
  */
-router.post('/:worldId/join', async (req: Request, res: Response) => {
+router.post('/:worldId/join', validate(joinWorldSchema), async (req: Request, res: Response) => {
   try {
     const { worldId } = req.params;
     const { userId, position } = req.body;
@@ -96,7 +98,7 @@ router.post('/:worldId/leave', async (req: Request, res: Response) => {
  * Update position
  * PUT /api/nexus/spatial/:worldId/position
  */
-router.put('/:worldId/position', async (req: Request, res: Response) => {
+router.put('/:worldId/position', validate(updatePositionSchema), async (req: Request, res: Response) => {
   try {
     const { worldId } = req.params;
     const { userId, position, rotation } = req.body;
