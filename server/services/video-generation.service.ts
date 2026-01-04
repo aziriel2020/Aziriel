@@ -7,6 +7,9 @@
  * - Luma Dream Machine
  * - Pika 1.5
  * - Sora (OpenAI)
+ * - Higgsfield AI (Diffuse, Lotus)
+ * - Haiper AI
+ * - Genmo Mochi 1
  */
 
 import axios from 'axios';
@@ -23,7 +26,7 @@ export interface VideoGenerationRequest {
   quality?: 'draft' | 'standard' | 'high' | 'ultra';
   aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3' | '21:9';
   resolution?: '720p' | '1080p' | '4k';
-  model?: 'auto' | 'kling' | 'veo' | 'runway' | 'luma' | 'pika' | 'sora';
+  model?: 'auto' | 'kling' | 'veo' | 'runway' | 'luma' | 'pika' | 'sora' | 'higgsfield' | 'haiper' | 'mochi';
   imageUrl?: string;
   negativePrompt?: string;
 }
@@ -406,6 +409,193 @@ class SoraService {
 }
 
 // ============================================================================
+// HIGGSFIELD AI (DIFFUSE & LOTUS)
+// ============================================================================
+
+class HiggsfieldService {
+  private apiKey: string;
+  private baseUrl = 'https://api.higgsfield.ai/v1';
+
+  constructor() {
+    this.apiKey = process.env.HIGGSFIELD_API_KEY || '';
+  }
+
+  async generateVideo(params: VideoGenerationRequest): Promise<VideoGenerationResponse> {
+    const duration = params.duration || 5;
+    const quality = params.quality || 'standard';
+
+    // Higgsfield has Diffuse (text-to-video) and Lotus (image-to-video)
+    const model = params.imageUrl ? 'lotus' : 'diffuse';
+
+    const payload: any = {
+      prompt: params.prompt,
+      model: model,
+      duration: duration,
+      aspect_ratio: params.aspectRatio || '16:9',
+      quality: quality === 'ultra' ? 'high' : 'standard',
+      fps: quality === 'ultra' ? 30 : 24,
+    };
+
+    if (params.imageUrl) {
+      payload.image_url = params.imageUrl;
+    }
+
+    if (params.negativePrompt) {
+      payload.negative_prompt = params.negativePrompt;
+    }
+
+    const response = await axios.post(this.baseUrl + '/generate', payload, {
+      headers: {
+        'Authorization': 'Bearer ' + this.apiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return {
+      jobId: response.data.task_id,
+      status: 'processing',
+      model: 'higgsfield-' + model,
+      estimatedTime: duration * 45,
+      cost: duration * 0.10,
+    };
+  }
+
+  async getJobStatus(jobId: string): Promise<VideoGenerationResponse> {
+    const response = await axios.get(this.baseUrl + '/tasks/' + jobId, {
+      headers: { 'Authorization': 'Bearer ' + this.apiKey },
+    });
+
+    return {
+      jobId,
+      status: response.data.status === 'completed' ? 'completed' : 'processing',
+      videoUrl: response.data.output_url,
+      thumbnailUrl: response.data.thumbnail_url,
+      model: 'higgsfield-' + response.data.model,
+      estimatedTime: 0,
+    };
+  }
+}
+
+// ============================================================================
+// HAIPER AI
+// ============================================================================
+
+class HaiperService {
+  private apiKey: string;
+  private baseUrl = 'https://api.haiper.ai/v2';
+
+  constructor() {
+    this.apiKey = process.env.HAIPER_API_KEY || '';
+  }
+
+  async generateVideo(params: VideoGenerationRequest): Promise<VideoGenerationResponse> {
+    const duration = params.duration || 4;
+    const quality = params.quality || 'standard';
+
+    const payload: any = {
+      prompt: params.prompt,
+      duration: duration,
+      aspect_ratio: params.aspectRatio || '16:9',
+      enhance: quality === 'ultra',
+      seed: Math.floor(Math.random() * 1000000),
+    };
+
+    if (params.imageUrl) {
+      payload.init_image = params.imageUrl;
+      payload.mode = 'animate';
+    } else {
+      payload.mode = 'create';
+    }
+
+    const response = await axios.post(this.baseUrl + '/creations', payload, {
+      headers: {
+        'X-API-Key': this.apiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return {
+      jobId: response.data.creation_id,
+      status: 'processing',
+      model: 'haiper-2.0',
+      estimatedTime: 90,
+      cost: 0.20,
+    };
+  }
+
+  async getJobStatus(jobId: string): Promise<VideoGenerationResponse> {
+    const response = await axios.get(this.baseUrl + '/creations/' + jobId, {
+      headers: { 'X-API-Key': this.apiKey },
+    });
+
+    return {
+      jobId,
+      status: response.data.status === 'succeeded' ? 'completed' : 'processing',
+      videoUrl: response.data.video_url,
+      thumbnailUrl: response.data.cover_url,
+      model: 'haiper-2.0',
+      estimatedTime: 0,
+    };
+  }
+}
+
+// ============================================================================
+// GENMO MOCHI 1 (OPEN SOURCE MODEL)
+// ============================================================================
+
+class MochiService {
+  private apiKey: string;
+  private baseUrl = 'https://api.genmo.ai/v1';
+
+  constructor() {
+    this.apiKey = process.env.GENMO_API_KEY || '';
+  }
+
+  async generateVideo(params: VideoGenerationRequest): Promise<VideoGenerationResponse> {
+    const duration = params.duration || 6;
+
+    const response = await axios.post(
+      this.baseUrl + '/mochi/generate',
+      {
+        prompt: params.prompt,
+        num_frames: duration * 24, // 24 fps
+        aspect_ratio: params.aspectRatio || '16:9',
+        guidance_scale: 7.5,
+        num_inference_steps: 50,
+      },
+      {
+        headers: {
+          'Authorization': 'Bearer ' + this.apiKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return {
+      jobId: response.data.request_id,
+      status: 'processing',
+      model: 'mochi-1-preview',
+      estimatedTime: 180,
+      cost: 0.15,
+    };
+  }
+
+  async getJobStatus(jobId: string): Promise<VideoGenerationResponse> {
+    const response = await axios.get(this.baseUrl + '/requests/' + jobId, {
+      headers: { 'Authorization': 'Bearer ' + this.apiKey },
+    });
+
+    return {
+      jobId,
+      status: response.data.status === 'completed' ? 'completed' : 'processing',
+      videoUrl: response.data.video_url,
+      model: 'mochi-1-preview',
+      estimatedTime: 0,
+    };
+  }
+}
+
+// ============================================================================
 // MAIN VIDEO GENERATION SERVICE WITH AUTO-ROUTING
 // ============================================================================
 
@@ -416,6 +606,9 @@ export class VideoGenerationService {
   private luma: LumaDreamMachineService;
   private pika: Pika15Service;
   private sora: SoraService;
+  private higgsfield: HiggsfieldService;
+  private haiper: HaiperService;
+  private mochi: MochiService;
 
   constructor() {
     this.kling = new KlingAIService();
@@ -424,6 +617,9 @@ export class VideoGenerationService {
     this.luma = new LumaDreamMachineService();
     this.pika = new Pika15Service();
     this.sora = new SoraService();
+    this.higgsfield = new HiggsfieldService();
+    this.haiper = new HaiperService();
+    this.mochi = new MochiService();
   }
 
   async generateVideo(params: VideoGenerationRequest): Promise<VideoGenerationResponse> {
@@ -443,6 +639,12 @@ export class VideoGenerationService {
           return await this.pika.generateVideo(params);
         case 'sora':
           return await this.sora.generateVideo(params);
+        case 'higgsfield':
+          return await this.higgsfield.generateVideo(params);
+        case 'haiper':
+          return await this.haiper.generateVideo(params);
+        case 'mochi':
+          return await this.mochi.generateVideo(params);
         default:
           return await this.kling.generateVideo(params);
       }
@@ -466,6 +668,13 @@ export class VideoGenerationService {
         return await this.pika.getJobStatus(jobId);
       case 'sora-1.0-turbo':
         return await this.sora.getJobStatus(jobId);
+      case 'higgsfield-diffuse':
+      case 'higgsfield-lotus':
+        return await this.higgsfield.getJobStatus(jobId);
+      case 'haiper-2.0':
+        return await this.haiper.getJobStatus(jobId);
+      case 'mochi-1-preview':
+        return await this.mochi.getJobStatus(jobId);
       default:
         throw new Error('Unknown model: ' + model);
     }
@@ -494,7 +703,7 @@ export class VideoGenerationService {
     params: VideoGenerationRequest,
     failedModel: string
   ): Promise<VideoGenerationResponse> {
-    const fallbackOrder = ['kling', 'veo', 'luma', 'pika', 'runway', 'sora']
+    const fallbackOrder = ['kling', 'veo', 'higgsfield', 'luma', 'haiper', 'pika', 'mochi', 'runway', 'sora']
       .filter(m => m !== failedModel);
 
     for (const model of fallbackOrder) {
