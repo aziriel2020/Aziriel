@@ -1,37 +1,41 @@
 /**
- * Webhooks Service - User-defined webhooks for events
+ * Webhook Service - EXTERNAL INTEGRATIONS
+ * Notify external systems of events in real-time
  */
 
 import axios from 'axios';
 import crypto from 'crypto';
 import { prisma } from '../config/database';
-import logger from './logger.service';
+import { logger } from '../config/logger';
 
-export type WebhookEvent =
-  | 'job.created'
-  | 'job.completed'
-  | 'job.failed'
-  | 'payment.completed'
-  | 'user.created'
-  | 'post.created'
-  | 'comment.created';
+export interface WebhookEvent {
+  event: string;
+  data: any;
+  timestamp: string;
+  userId: string;
+}
+
+export interface WebhookConfig {
+  url: string;
+  events: string[];
+  secret?: string;
+  headers?: Record<string, string>;
+}
 
 export class WebhookService {
   /**
-   * Trigger webhook
+   * Send webhook notification
    */
-  static async trigger(
-    userId: string,
-    event: WebhookEvent,
-    payload: Record<string, any>
-  ): Promise<void> {
+  static async sendWebhook(userId: string, event: string, data: any): Promise<void> {
     try {
-      // Get user's active webhooks for this event
+      // Get user's webhook configurations
       const webhooks = await prisma.webhook.findMany({
         where: {
           userId,
-          event,
-          active: true,
+          enabled: true,
+          events: {
+            has: event,
+          },
         },
       });
 
@@ -39,136 +43,85 @@ export class WebhookService {
         return;
       }
 
-      // Trigger all webhooks in parallel
-      const promises = webhooks.map((webhook) =>
-        this.sendWebhook(webhook.id, webhook.url, webhook.secret, event, payload)
+      const payload: WebhookEvent = {
+        event,
+        data,
+        timestamp: new Date().toISOString(),
+        userId,
+      };
+
+      // Send to all configured webhooks
+      const promises = webhooks.map(webhook =>
+        this.deliverWebhook(webhook.url, payload, webhook.secret)
       );
 
       await Promise.allSettled(promises);
-    } catch (error: any) {
-      logger.error('Webhook trigger error', { error: error.message, event, userId });
+    } catch (error) {
+      logger.error('Webhook delivery error:', error);
     }
   }
 
   /**
-   * Send webhook request
+   * Deliver webhook to endpoint
    */
-  private static async sendWebhook(
-    webhookId: string,
+  private static async deliverWebhook(
     url: string,
-    secret: string | null,
-    event: WebhookEvent,
-    payload: Record<string, any>
+    payload: WebhookEvent,
+    secret?: string
   ): Promise<void> {
-    const startTime = Date.now();
-
     try {
-      // Prepare payload
-      const webhookPayload = {
-        id: crypto.randomUUID(),
-        event,
-        timestamp: new Date().toISOString(),
-        data: payload,
+      const signature = secret
+        ? this.generateSignature(JSON.stringify(payload), secret)
+        : undefined;
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'NeuraField-Webhooks/1.0',
       };
 
-      // Generate signature
-      const signature = secret
-        ? crypto
-            .createHmac('sha256', secret)
-            .update(JSON.stringify(webhookPayload))
-            .digest('hex')
-        : null;
+      if (signature) {
+        headers['X-NeuraField-Signature'] = signature;
+      }
 
-      // Send request
-      const response = await axios.post(url, webhookPayload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'NEURAFIELD-Webhook/1.0',
-          ...(signature && { 'X-Webhook-Signature': signature }),
-        },
-        timeout: 10000, // 10 seconds
+      const response = await axios.post(url, payload, {
+        headers,
+        timeout: 5000,
+        validateStatus: (status) => status >= 200 && status < 300,
       });
 
-      const duration = Date.now() - startTime;
-
-      // Log successful delivery
-      await prisma.webhookLog.create({
-        data: {
-          webhookId,
-          event,
-          payload: webhookPayload,
-          status: response.status,
-          response: response.data,
-          duration,
-        },
-      });
-
-      logger.info('Webhook delivered', {
-        webhookId,
-        event,
-        status: response.status,
-        duration,
-      });
+      logger.info(\`Webhook delivered successfully to \${url}\`);
     } catch (error: any) {
-      const duration = Date.now() - startTime;
+      logger.error(\`Webhook delivery failed to \${url}:\`, error.message);
 
       // Log failed delivery
-      await prisma.webhookLog.create({
+      await prisma.webhookDelivery.create({
         data: {
-          webhookId,
-          event,
-          payload: { event, data: payload },
-          status: error.response?.status || 0,
-          response: error.message,
-          duration,
+          url,
+          payload,
+          success: false,
           error: error.message,
+          responseStatus: error.response?.status,
+          timestamp: new Date(),
         },
       });
-
-      logger.error('Webhook delivery failed', {
-        webhookId,
-        event,
-        error: error.message,
-        duration,
-      });
-
-      // Retry logic (max 3 retries)
-      const webhook = await prisma.webhook.findUnique({
-        where: { id: webhookId },
-      });
-
-      if (webhook && webhook.retries < 3) {
-        await prisma.webhook.update({
-          where: { id: webhookId },
-          data: { retries: webhook.retries + 1 },
-        });
-
-        // Retry with exponential backoff
-        const delay = Math.pow(2, webhook.retries) * 1000;
-        setTimeout(() => {
-          this.sendWebhook(webhookId, url, secret, event, payload);
-        }, delay);
-      } else {
-        // Disable webhook after max retries
-        await prisma.webhook.update({
-          where: { id: webhookId },
-          data: { active: false },
-        });
-
-        logger.warn('Webhook disabled after max retries', { webhookId });
-      }
     }
+  }
+
+  /**
+   * Generate HMAC signature for webhook verification
+   */
+  private static generateSignature(payload: string, secret: string): string {
+    return crypto
+      .createHmac('sha256', secret)
+      .update(payload)
+      .digest('hex');
   }
 
   /**
    * Verify webhook signature
    */
   static verifySignature(payload: string, signature: string, secret: string): boolean {
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
-
+    const expectedSignature = this.generateSignature(payload, secret);
     return crypto.timingSafeEqual(
       Buffer.from(signature),
       Buffer.from(expectedSignature)
@@ -176,66 +129,81 @@ export class WebhookService {
   }
 
   /**
-   * Test webhook
+   * Register webhook endpoint
    */
-  static async testWebhook(webhookId: string): Promise<boolean> {
-    try {
-      const webhook = await prisma.webhook.findUnique({
-        where: { id: webhookId },
-      });
+  static async registerWebhook(
+    userId: string,
+    config: WebhookConfig
+  ): Promise<any> {
+    const webhook = await prisma.webhook.create({
+      data: {
+        userId,
+        url: config.url,
+        events: config.events,
+        secret: config.secret,
+        enabled: true,
+      },
+    });
 
-      if (!webhook) {
-        throw new Error('Webhook not found');
-      }
+    // Test webhook
+    await this.sendWebhook(userId, 'webhook.test', {
+      message: 'Webhook registered successfully',
+      webhookId: webhook.id,
+    });
 
-      await this.sendWebhook(
-        webhook.id,
-        webhook.url,
-        webhook.secret,
-        'job.created' as WebhookEvent,
-        {
-          test: true,
-          message: 'This is a test webhook',
-        }
-      );
-
-      return true;
-    } catch (error: any) {
-      logger.error('Webhook test failed', { webhookId, error: error.message });
-      return false;
-    }
+    return webhook;
   }
 
   /**
-   * Get webhook logs
+   * Delete webhook
    */
-  static async getLogs(webhookId: string, limit = 100) {
-    return prisma.webhookLog.findMany({
-      where: { webhookId },
+  static async deleteWebhook(userId: string, webhookId: string): Promise<void> {
+    await prisma.webhook.delete({
+      where: {
+        id: webhookId,
+        userId,
+      },
+    });
+  }
+
+  /**
+   * Get webhook delivery logs
+   */
+  static async getDeliveryLogs(userId: string, limit: number = 50) {
+    const webhooks = await prisma.webhook.findMany({
+      where: { userId },
+      select: { url: true },
+    });
+
+    const urls = webhooks.map(w => w.url);
+
+    const logs = await prisma.webhookDelivery.findMany({
+      where: {
+        url: { in: urls },
+      },
+      orderBy: {
+        timestamp: 'desc',
+      },
       take: limit,
-      orderBy: { createdAt: 'desc' },
     });
+
+    return logs;
   }
 
   /**
-   * Replay webhook
+   * Common webhook events
    */
-  static async replay(logId: string): Promise<void> {
-    const log = await prisma.webhookLog.findUnique({
-      where: { id: logId },
-      include: { webhook: true },
-    });
-
-    if (!log || !log.webhook) {
-      throw new Error('Log or webhook not found');
-    }
-
-    await this.sendWebhook(
-      log.webhook.id,
-      log.webhook.url,
-      log.webhook.secret,
-      log.event as WebhookEvent,
-      log.payload as Record<string, any>
-    );
-  }
+  static EVENTS = {
+    VIDEO_CREATED: 'video.created',
+    VIDEO_PROCESSING: 'video.processing',
+    VIDEO_COMPLETED: 'video.completed',
+    VIDEO_FAILED: 'video.failed',
+    BATCH_CREATED: 'batch.created',
+    BATCH_COMPLETED: 'batch.completed',
+    CREDITS_LOW: 'credits.low',
+    CREDITS_DEPLETED: 'credits.depleted',
+    USER_REGISTERED: 'user.registered',
+  };
 }
+
+export default WebhookService;

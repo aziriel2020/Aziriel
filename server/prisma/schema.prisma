@@ -1,0 +1,231 @@
+// Prisma Schema - ULTIMATE DATABASE SCHEMA
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// USER MODEL
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password              String
+  name                  String?
+  
+  // Credits & Subscription
+  credits               Int       @default(100)
+  plan                  String    @default("free") // free, starter, pro, enterprise
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+  subscriptionEndDate   DateTime?
+  
+  // Relations
+  jobs                  Job[]
+  batches               Batch[]
+  workspaces            Workspace[]
+  workspaceMemberships  WorkspaceMember[]
+  comments              Comment[]
+  creditTransactions    CreditTransaction[]
+  webhooks              Webhook[]
+  shares                Share[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// JOB MODEL  
+model Job {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  prompt                String
+  provider              String    // sora2, veo31, gen45, etc.
+  status                String    // PENDING, PROCESSING, COMPLETED, FAILED
+  
+  outputUrl             String?
+  thumbnailUrl          String?
+  error                 String?
+  
+  options               Json?     // Model-specific options
+  metadata              Json?     // Batch ID, priority, etc.
+  
+  // Workspace sharing
+  workspaceId           String?
+  workspace             Workspace? @relation(fields: [workspaceId], references: [id])
+  sharedAt              DateTime?
+  
+  // Relations
+  comments              Comment[]
+  shares                Share[]
+  videoViews            VideoView[]
+  creditTransactions    CreditTransaction[]
+  
+  createdAt             DateTime  @default(now())
+  completedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+}
+
+// BATCH MODEL
+model Batch {
+  id                    String    @id
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name                  String
+  totalJobs             Int
+  completedJobs         Int       @default(0)
+  failedJobs            Int       @default(0)
+  status                String    // PROCESSING, COMPLETED, CANCELLED
+  priority              String    @default("normal")
+  
+  createdAt             DateTime  @default(now())
+  completedAt           DateTime?
+}
+
+// WORKSPACE MODEL
+model Workspace {
+  id                    String    @id @default(uuid())
+  name                  String
+  description           String?
+  ownerId               String
+  owner                 User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  members               WorkspaceMember[]
+  jobs                  Job[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// WORKSPACE MEMBER MODEL
+model WorkspaceMember {
+  id                    String    @id @default(uuid())
+  workspaceId           String
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                  String    // owner, admin, editor, viewer
+  
+  createdAt             DateTime  @default(now())
+  
+  @@unique([workspaceId, userId])
+}
+
+// COMMENT MODEL
+model Comment {
+  id                    String    @id @default(uuid())
+  jobId                 String
+  job                   Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  text                  String
+  timestamp             Float?    // Video timestamp in seconds
+  
+  parentId              String?
+  parent                Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies               Comment[] @relation("CommentReplies")
+  
+  createdAt             DateTime  @default(now())
+}
+
+// WEBHOOK MODEL
+model Webhook {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  url                   String
+  events                String[]  // Array of event types
+  secret                String?
+  enabled               Boolean   @default(true)
+  
+  createdAt             DateTime  @default(now())
+}
+
+// WEBHOOK DELIVERY LOG
+model WebhookDelivery {
+  id                    String    @id @default(uuid())
+  url                   String
+  payload               Json
+  success               Boolean
+  error                 String?
+  responseStatus        Int?
+  timestamp             DateTime  @default(now())
+}
+
+// SUBSCRIPTION MODEL
+model Subscription {
+  id                    String    @id @default(uuid())
+  userId                String
+  planId                String
+  status                String    // active, cancelled, expired
+  stripeSubscriptionId  String    @unique
+  
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean   @default(false)
+  
+  createdAt             DateTime  @default(now())
+  
+  @@unique([userId, stripeSubscriptionId])
+}
+
+// CREDIT TRANSACTION MODEL
+model CreditTransaction {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  amount                Int       // Positive for credit, negative for debit
+  type                  String    // purchase, debit, refund, bonus
+  description           String
+  
+  jobId                 String?
+  job                   Job?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  
+  createdAt             DateTime  @default(now())
+}
+
+// SHARE MODEL
+model Share {
+  id                    String    @id @default(uuid())
+  jobId                 String
+  job                   Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId                String?
+  user                  User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  platform              String    // twitter, facebook, linkedin, etc.
+  timestamp             DateTime  @default(now())
+}
+
+// SHORT URL MODEL
+model ShortUrl {
+  id                    String    @id @default(uuid())
+  jobId                 String    @unique
+  shortCode             String    @unique
+  clicks                Int       @default(0)
+  createdAt             DateTime  @default(now())
+}
+
+// VIDEO VIEW MODEL
+model VideoView {
+  id                    String    @id @default(uuid())
+  jobId                 String
+  job                   Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId                String?
+  metadata              Json?
+  timestamp             DateTime  @default(now())
+}
+
+// PROJECT MODEL (Existing)
+model Project {
+  id                    String    @id @default(uuid())
+  name                  String
+  description           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
