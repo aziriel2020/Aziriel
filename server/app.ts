@@ -20,11 +20,16 @@ import generationRoutes from './routes/generation.routes';
 import videoRoutes from './routes/video.routes';
 import assetRoutes from './routes/asset.routes';
 import userRoutes from './routes/user.routes';
+import jobsRoutes from './routes/jobs.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
 import { notFoundHandler } from './middleware/notFound.middleware';
 import logger from './services/logger.service';
+
+// Import services (initialize queue workers)
+import './services/queue.service';
+import jwt from 'jsonwebtoken';
 
 // Create Express app
 const app: Express = express();
@@ -111,6 +116,7 @@ app.use('/api/generate', generationRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobsRoutes);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
@@ -140,9 +146,37 @@ app.use(errorHandler);
 // SOCKET.IO CONNECTION
 // ============================================
 
-io.on('connection', (socket) => {
-  logger.info(`Socket connected: ${socket.id}`);
+// Socket.IO Authentication Middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
 
+  if (!token) {
+    // Allow anonymous connections (they just won't get user-specific events)
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { id: string };
+    (socket as any).userId = decoded.id;
+    next();
+  } catch (err) {
+    logger.warn(`Socket authentication failed: ${err}`);
+    next(); // Allow connection anyway
+  }
+});
+
+io.on('connection', (socket) => {
+  const userId = (socket as any).userId;
+
+  logger.info(`Socket connected: ${socket.id}${userId ? ` (User: ${userId})` : ' (Anonymous)'}`);
+
+  // Join user-specific room for job notifications
+  if (userId) {
+    socket.join(`user:${userId}`);
+    logger.info(`Socket ${socket.id} joined user room: user:${userId}`);
+  }
+
+  // Project room management
   socket.on('join-project', (projectId: string) => {
     socket.join(`project:${projectId}`);
     logger.info(`Socket ${socket.id} joined project ${projectId}`);

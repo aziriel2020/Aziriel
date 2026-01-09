@@ -1,579 +1,208 @@
 /**
- * Job Queue Service - Bull/BullMQ Integration
- * Background job processing for video generation, AI tasks, etc.
+ * Queue Service - PRODUCTION READY avec Bull
+ * Gestion des files d'attente pour génération vidéo
  */
 
-import Queue from 'bull';
+import Bull from 'bull';
 import { prisma } from '../config/database';
-import logger from './logger.service';
-import { RunwayService } from './ai/runway.service';
-import { ReplicateService } from './ai/replicate.service';
-import { OpenAIService } from './ai/openai.service';
-import { AnthropicService } from './ai/anthropic.service';
-import { GoogleService } from './ai/google.service';
-import { KlingService } from './ai/kling.service';
-import { SoraService } from './ai/sora.service';
-import { VeoService } from './ai/veo.service';
-import { HunyuanService } from './ai/hunyuan.service';
-import { WanService } from './ai/wan.service';
-import { HailuoService } from './ai/hailuo.service';
-import { LumaService } from './ai/luma.service';
-import { PikaService } from './ai/pika.service';
-import { MochiService } from './ai/mochi.service';
-import { STARFlowService } from './ai/starflow.service';
-import { VideoService } from './video.service';
+import videoGenerationService from './video-generation.service';
+import { logger } from '../config/logger';
+import { io } from '../app';
+import S3Service from './s3.service';
 
-// Create queues for different job types
-export const videoGenerationQueue = new Queue('video-generation', {
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-  },
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+// Create queue
+export const videoQueue = new Bull('video-generation', REDIS_URL, {
   defaultJobOptions: {
     attempts: 3,
     backoff: {
       type: 'exponential',
       delay: 2000,
     },
-    removeOnComplete: 100,
-    removeOnFail: 500,
+    removeOnComplete: false,
+    removeOnFail: false,
   },
 });
-
-export const imageGenerationQueue = new Queue('image-generation', {
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-  },
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
-  },
-});
-
-export const videoProcessingQueue = new Queue('video-processing', {
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-  },
-  defaultJobOptions: {
-    attempts: 2,
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
-    },
-  },
-});
-
-// ============================================
-// VIDEO GENERATION QUEUE PROCESSOR
-// ============================================
-
-videoGenerationQueue.process(async (job) => {
-  const { jobId, provider, prompt, options } = job.data;
-
-  logger.info(`Processing video generation job: ${jobId}, provider: ${provider}`);
-
-  try {
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'PROCESSING', progress: 5 },
-    });
-
-    let videoUrl: string;
-
-    switch (provider) {
-      // Western Big Three
-      case 'sora':
-      case 'sora-2':
-        videoUrl = await SoraService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'veo':
-      case 'veo-3.1':
-        videoUrl = await VeoService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'runway':
-      case 'runway-gen2':
-        videoUrl = await RunwayService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'runway-gen3':
-        videoUrl = await RunwayService.generateVideoGen3(jobId, prompt, options);
-        break;
-
-      case 'runway-gen4':
-      case 'runway-gen4.5':
-        videoUrl = await RunwayService.generateVideoGen4(jobId, prompt, options);
-        break;
-
-      // Chinese Innovation Leaders
-      case 'hunyuan':
-      case 'hunyuan-1.5':
-        videoUrl = await HunyuanService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'hy-world':
-      case 'hy-world-1.5':
-        // WorldPlay requires special handling (interactive session)
-        throw new Error('HY-World requires interactive session, use startWorldPlaySession instead');
-
-      case 'wan':
-      case 'wan-2.2':
-        videoUrl = await WanService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'kling':
-      case 'kling-2.6':
-        videoUrl = await KlingService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'kling-o1':
-        // O1 requires start + end frames
-        if (!options?.startFrame || !options?.endFrame) {
-          throw new Error('Kling O1 requires startFrame and endFrame options');
-        }
-        const result = await KlingService.generateWithO1(jobId, options.startFrame, options.endFrame, prompt, options);
-        videoUrl = result.videoUrl;
-        break;
-
-      case 'hailuo':
-      case 'hailuo-2.3':
-        videoUrl = await HailuoService.generateVideo(jobId, prompt, options);
-        break;
-
-      // Specialized Innovators
-      case 'luma':
-      case 'luma-ray3':
-        videoUrl = await LumaService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'pika':
-      case 'pika-2.2':
-        videoUrl = await PikaService.generateVideo(jobId, prompt, options);
-        break;
-
-      case 'mochi':
-      case 'mochi-1':
-        videoUrl = await MochiService.generateVideo(jobId, prompt, options);
-        break;
-
-      // Research Frontier
-      case 'starflow':
-      case 'starflow-v':
-        videoUrl = await STARFlowService.generateVideo(jobId, prompt, options);
-        break;
-
-      // Legacy Replicate models
-      case 'replicate-zeroscope':
-        videoUrl = await ReplicateService.generateVideoZeroscope(jobId, prompt, options);
-        break;
-
-      case 'replicate-animatediff':
-        videoUrl = await ReplicateService.generateVideoAnimateDiff(jobId, prompt, options);
-        break;
-
-      default:
-        throw new Error(`Unknown video generation provider: ${provider}`);
-    }
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'COMPLETED',
-        progress: 100,
-        outputUrl: videoUrl,
-        completedAt: new Date(),
-      },
-    });
-
-    logger.info(`Video generation completed: ${jobId}`);
-    return { videoUrl };
-  } catch (error: any) {
-    logger.error(`Video generation failed: ${jobId}`, error);
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'FAILED',
-        error: error.message,
-      },
-    });
-
-    throw error;
-  }
-});
-
-// ============================================
-// IMAGE GENERATION QUEUE PROCESSOR
-// ============================================
-
-imageGenerationQueue.process(async (job) => {
-  const { jobId, provider, prompt, options } = job.data;
-
-  logger.info(`Processing image generation job: ${jobId}, provider: ${provider}`);
-
-  try {
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'PROCESSING', progress: 10 },
-    });
-
-    let imageUrl: string;
-
-    switch (provider) {
-      case 'dalle':
-        imageUrl = await OpenAIService.generateImage(jobId, prompt, options);
-        break;
-
-      case 'replicate-sdxl':
-        imageUrl = await ReplicateService.generateImageSDXL(jobId, prompt, options);
-        break;
-
-      case 'replicate-flux':
-        imageUrl = await ReplicateService.generateImageFlux(jobId, prompt, options);
-        break;
-
-      default:
-        throw new Error(`Unknown image generation provider: ${provider}`);
-    }
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'COMPLETED',
-        progress: 100,
-        outputUrl: imageUrl,
-        completedAt: new Date(),
-      },
-    });
-
-    logger.info(`Image generation completed: ${jobId}`);
-    return { imageUrl };
-  } catch (error: any) {
-    logger.error(`Image generation failed: ${jobId}`, error);
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'FAILED',
-        error: error.message,
-      },
-    });
-
-    throw error;
-  }
-});
-
-// ============================================
-// VIDEO PROCESSING QUEUE PROCESSOR
-// ============================================
-
-videoProcessingQueue.process(async (job) => {
-  const { jobId, operation, inputPath, outputPath, options } = job.data;
-
-  logger.info(`Processing video operation: ${jobId}, operation: ${operation}`);
-
-  try {
-    await prisma.job.update({
-      where: { id: jobId },
-      data: { status: 'PROCESSING', progress: 10 },
-    });
-
-    let resultPath: string;
-
-    switch (operation) {
-      case 'transcode':
-        resultPath = await VideoService.transcodeVideo(inputPath, outputPath, options);
-        break;
-
-      case 'trim':
-        resultPath = await VideoService.trimVideo(
-          inputPath,
-          outputPath,
-          options.startTime,
-          options.duration
-        );
-        break;
-
-      case 'add-audio':
-        resultPath = await VideoService.addAudio(
-          inputPath,
-          options.audioPath,
-          outputPath,
-          options
-        );
-        break;
-
-      case 'add-text':
-        resultPath = await VideoService.addTextOverlay(
-          inputPath,
-          outputPath,
-          options.text,
-          options
-        );
-        break;
-
-      case 'add-watermark':
-        resultPath = await VideoService.addWatermark(
-          inputPath,
-          options.watermarkPath,
-          outputPath,
-          options.position,
-          options.opacity
-        );
-        break;
-
-      case 'apply-filters':
-        resultPath = await VideoService.applyFilters(inputPath, outputPath, options.filters);
-        break;
-
-      case 'change-speed':
-        resultPath = await VideoService.changeSpeed(inputPath, outputPath, options.speed);
-        break;
-
-      case 'concatenate':
-        resultPath = await VideoService.concatenateVideos(options.videoPaths, outputPath);
-        break;
-
-      case 'generate-thumbnail':
-        resultPath = await VideoService.generateThumbnail(inputPath, outputPath, options.time);
-        break;
-
-      case 'convert-gif':
-        resultPath = await VideoService.convertToGif(inputPath, outputPath, options);
-        break;
-
-      default:
-        throw new Error(`Unknown video operation: ${operation}`);
-    }
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'COMPLETED',
-        progress: 100,
-        outputUrl: resultPath,
-        completedAt: new Date(),
-      },
-    });
-
-    logger.info(`Video processing completed: ${jobId}`);
-    return { resultPath };
-  } catch (error: any) {
-    logger.error(`Video processing failed: ${jobId}`, error);
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: 'FAILED',
-        error: error.message,
-      },
-    });
-
-    throw error;
-  }
-});
-
-// ============================================
-// QUEUE EVENT LISTENERS
-// ============================================
-
-const setupQueueListeners = (queue: Queue.Queue, queueName: string) => {
-  queue.on('completed', (job, result) => {
-    logger.info(`${queueName} job completed:`, job.id);
-  });
-
-  queue.on('failed', (job, err) => {
-    logger.error(`${queueName} job failed:`, job?.id, err);
-  });
-
-  queue.on('stalled', (job) => {
-    logger.warn(`${queueName} job stalled:`, job.id);
-  });
-
-  queue.on('progress', (job, progress) => {
-    logger.info(`${queueName} job progress:`, job.id, `${progress}%`);
-  });
-};
-
-setupQueueListeners(videoGenerationQueue, 'video-generation');
-setupQueueListeners(imageGenerationQueue, 'image-generation');
-setupQueueListeners(videoProcessingQueue, 'video-processing');
-
-// ============================================
-// QUEUE SERVICE
-// ============================================
 
 export class QueueService {
   /**
-   * Add video generation job
+   * Add video generation job to queue
    */
   static async addVideoGenerationJob(
     jobId: string,
-    provider: 'runway' | 'replicate-zeroscope' | 'replicate-animatediff',
+    provider: string,
     prompt: string,
-    options?: any
-  ) {
-    return await videoGenerationQueue.add({
+    options: any
+  ): Promise<void> {
+    await videoQueue.add('generate-video', {
       jobId,
       provider,
       prompt,
       options,
+    }, {
+      jobId, // Use DB job ID as Bull job ID
     });
-  }
 
-  /**
-   * Add image generation job
-   */
-  static async addImageGenerationJob(
-    jobId: string,
-    provider: 'dalle' | 'replicate-sdxl' | 'replicate-flux',
-    prompt: string,
-    options?: any
-  ) {
-    return await imageGenerationQueue.add({
-      jobId,
-      provider,
-      prompt,
-      options,
-    });
-  }
-
-  /**
-   * Add video processing job
-   */
-  static async addVideoProcessingJob(
-    jobId: string,
-    operation: string,
-    inputPath: string,
-    outputPath: string,
-    options?: any
-  ) {
-    return await videoProcessingQueue.add({
-      jobId,
-      operation,
-      inputPath,
-      outputPath,
-      options,
-    });
-  }
-
-  /**
-   * Get job status
-   */
-  static async getJobStatus(queueName: string, jobId: string) {
-    const queue = this.getQueue(queueName);
-    const job = await queue.getJob(jobId);
-
-    if (!job) return null;
-
-    return {
-      id: job.id,
-      state: await job.getState(),
-      progress: job.progress(),
-      data: job.data,
-      returnvalue: job.returnvalue,
-      failedReason: job.failedReason,
-      attemptsMade: job.attemptsMade,
-      processedOn: job.processedOn,
-      finishedOn: job.finishedOn,
-    };
-  }
-
-  /**
-   * Get queue stats
-   */
-  static async getQueueStats(queueName: string) {
-    const queue = this.getQueue(queueName);
-
-    const [waiting, active, completed, failed, delayed] = await Promise.all([
-      queue.getWaitingCount(),
-      queue.getActiveCount(),
-      queue.getCompletedCount(),
-      queue.getFailedCount(),
-      queue.getDelayedCount(),
-    ]);
-
-    return {
-      waiting,
-      active,
-      completed,
-      failed,
-      delayed,
-      total: waiting + active + completed + failed + delayed,
-    };
-  }
-
-  /**
-   * Pause queue
-   */
-  static async pauseQueue(queueName: string) {
-    const queue = this.getQueue(queueName);
-    await queue.pause();
-  }
-
-  /**
-   * Resume queue
-   */
-  static async resumeQueue(queueName: string) {
-    const queue = this.getQueue(queueName);
-    await queue.resume();
-  }
-
-  /**
-   * Clean old jobs
-   */
-  static async cleanQueue(queueName: string, grace: number = 86400000) {
-    const queue = this.getQueue(queueName);
-    await queue.clean(grace, 'completed');
-    await queue.clean(grace, 'failed');
-  }
-
-  /**
-   * Get queue instance
-   */
-  private static getQueue(queueName: string): Queue.Queue {
-    switch (queueName) {
-      case 'video-generation':
-        return videoGenerationQueue;
-      case 'image-generation':
-        return imageGenerationQueue;
-      case 'video-processing':
-        return videoProcessingQueue;
-      default:
-        throw new Error(`Unknown queue: ${queueName}`);
-    }
-  }
-
-  /**
-   * Retry failed job
-   */
-  static async retryJob(queueName: string, jobId: string) {
-    const queue = this.getQueue(queueName);
-    const job = await queue.getJob(jobId);
-
-    if (!job) throw new Error('Job not found');
-
-    await job.retry();
-  }
-
-  /**
-   * Remove job
-   */
-  static async removeJob(queueName: string, jobId: string) {
-    const queue = this.getQueue(queueName);
-    const job = await queue.getJob(jobId);
-
-    if (!job) throw new Error('Job not found');
-
-    await job.remove();
+    logger.info(`Job ${jobId} added to queue`);
   }
 }
+
+/**
+ * WORKER - Process video generation jobs
+ */
+videoQueue.process('generate-video', async (job) => {
+  const { jobId, provider, prompt, options } = job.data;
+
+  try {
+    logger.info(`Processing job ${jobId} with provider ${provider}`);
+
+    // Update job status to PROCESSING
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { status: 'PROCESSING' },
+    });
+
+    // Emit WebSocket event
+    const dbJob = await prisma.job.findUnique({ where: { id: jobId } });
+    if (dbJob) {
+      io.to(`user:${dbJob.userId}`).emit('job:processing', { jobId });
+    }
+
+    // VRAI APPEL À L'API DE GÉNÉRATION
+    const result = await videoGenerationService.generateVideo({
+      prompt,
+      model: provider || options?.model || 'auto',
+      ...options,
+      userId: dbJob?.userId || 'system',
+    });
+
+    // Update job progress
+    job.progress(50);
+
+    // Poll for completion
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max (60 * 5s)
+
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
+
+      const status = await videoGenerationService.getJobStatus(
+        result.jobId,
+        result.model
+      );
+
+      job.progress(50 + (attempts / maxAttempts) * 50);
+
+      if (status.status === 'completed') {
+        // SUCCESS! Upload to S3
+        logger.info(`Job ${jobId} completed, uploading to S3...`);
+
+        try {
+          // Upload video to S3
+          const videoUpload = await S3Service.uploadVideoFromUrl(status.videoUrl, {
+            jobId,
+            provider,
+            userId: dbJob?.userId || 'unknown',
+          });
+
+          // Upload thumbnail if available
+          let thumbnailUpload;
+          if (status.thumbnailUrl) {
+            thumbnailUpload = await S3Service.uploadThumbnailFromUrl(status.thumbnailUrl, {
+              jobId,
+              provider,
+            });
+          }
+
+          // Update job with S3 URLs
+          await prisma.job.update({
+            where: { id: jobId },
+            data: {
+              status: 'COMPLETED',
+              outputUrl: videoUpload.url, // Use S3 URL
+              thumbnailUrl: thumbnailUpload?.url || status.thumbnailUrl,
+              completedAt: new Date(),
+            },
+          });
+
+          // Emit WebSocket event
+          if (dbJob) {
+            io.to(`user:${dbJob.userId}`).emit('job:completed', {
+              jobId,
+              outputUrl: videoUpload.url,
+            });
+          }
+
+          logger.info(`Job ${jobId} completed and uploaded to S3 successfully`);
+          return { success: true, outputUrl: videoUpload.url };
+        } catch (uploadError: any) {
+          // If S3 upload fails, still save the original URL
+          logger.error(`S3 upload failed for job ${jobId}, using original URL:`, uploadError);
+
+          await prisma.job.update({
+            where: { id: jobId },
+            data: {
+              status: 'COMPLETED',
+              outputUrl: status.videoUrl,
+              thumbnailUrl: status.thumbnailUrl,
+              completedAt: new Date(),
+            },
+          });
+
+          // Emit WebSocket event with original URL
+          if (dbJob) {
+            io.to(`user:${dbJob.userId}`).emit('job:completed', {
+              jobId,
+              outputUrl: status.videoUrl,
+            });
+          }
+
+          return { success: true, outputUrl: status.videoUrl };
+        }
+      } else if (status.status === 'failed') {
+        throw new Error('Video generation failed');
+      }
+
+      attempts++;
+    }
+
+    throw new Error('Video generation timeout');
+
+  } catch (error: any) {
+    logger.error(`Job ${jobId} failed:`, error);
+
+    // Update job status to FAILED
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: 'FAILED',
+        error: error.message,
+      },
+    });
+
+    // Emit WebSocket event
+    const dbJob = await prisma.job.findUnique({ where: { id: jobId } });
+    if (dbJob) {
+      io.to(`user:${dbJob.userId}`).emit('job:failed', {
+        jobId,
+        error: error.message,
+      });
+    }
+
+    throw error;
+  }
+});
+
+// Queue event listeners
+videoQueue.on('completed', (job, result) => {
+  logger.info(`Job ${job.id} completed`);
+});
+
+videoQueue.on('failed', (job, err) => {
+  logger.error(`Job ${job?.id} failed:`, err);
+});
+
+videoQueue.on('progress', (job, progress) => {
+  logger.info(`Job ${job.id} progress: ${progress}%`);
+});

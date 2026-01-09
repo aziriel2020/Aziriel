@@ -1,98 +1,169 @@
-# NEURAFIELD QUANTUM - DOCKER COMPOSE
-# Complete production stack with all services
-
 version: '3.8'
 
 services:
-  # Main Application
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: neurafield-app
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/neurafield
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - neurafield-network
-    volumes:
-      - ./logs:/app/logs
-
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: neurafield-postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=neurafield
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      POSTGRES_USER: neurafield
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-neurafield_secret}
+      POSTGRES_DB: neurafield
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - neurafield-network
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U neurafield"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Redis Cache
+  # Redis (for Bull queue)
   redis:
     image: redis:7-alpine
     container_name: neurafield-redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data
-    networks:
-      - neurafield-network
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 3s
+      timeout: 5s
       retries: 5
 
-  # Nginx Reverse Proxy
+  # MinIO (S3-compatible storage for local development)
+  minio:
+    image: minio/minio:latest
+    container_name: neurafield-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Backend Server
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: neurafield-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+
+      # Database
+      DATABASE_URL: postgresql://neurafield:${POSTGRES_PASSWORD:-neurafield_secret}@postgres:5432/neurafield
+
+      # Redis
+      REDIS_URL: redis://redis:6379
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+
+      # S3 (MinIO for local, AWS for production)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin123}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-neurafield-videos}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      CDN_URL: ${CDN_URL}
+
+      # Client URL
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+
+      # AI Model API Keys
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      RUNWAY_API_KEY: ${RUNWAY_API_KEY}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY}
+      TENCENT_SECRET_ID: ${TENCENT_SECRET_ID}
+      TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY}
+      ALIBABA_ACCESS_KEY_ID: ${ALIBABA_ACCESS_KEY_ID}
+      ALIBABA_ACCESS_KEY_SECRET: ${ALIBABA_ACCESS_KEY_SECRET}
+      KUAISHOU_API_KEY: ${KUAISHOU_API_KEY}
+      LUMA_API_KEY: ${LUMA_API_KEY}
+      PIKA_API_KEY: ${PIKA_API_KEY}
+      GENMO_API_KEY: ${GENMO_API_KEY}
+      HIGGSFIELD_API_KEY: ${HIGGSFIELD_API_KEY}
+      HAIPER_API_KEY: ${HAIPER_API_KEY}
+
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - ./server/logs:/app/logs
+    command: sh -c "npx prisma migrate deploy && npm start"
+
+  # Frontend Client
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: neurafield-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-http://localhost:4000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - /app/.next
+
+  # Nginx Reverse Proxy (Optional - for production)
   nginx:
     image: nginx:alpine
     container_name: neurafield-nginx
     restart: unless-stopped
+    profiles:
+      - production
+    depends_on:
+      - server
+      - client
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - app
-    networks:
-      - neurafield-network
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
 
 volumes:
-  postgres-data:
-  redis-data:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  nginx_cache:
+    driver: local
 
 networks:
-  neurafield-network:
-    driver: bridge
+  default:
+    name: neurafield-network

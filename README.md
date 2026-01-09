@@ -1,579 +1,426 @@
-# NeuraField Quantum Platform
+# NeuraField Quantum - AI Video Generation Platform
 
-Revolutionary AI-powered generative social platform combining Google Flow clone capabilities with the Nexus Protocol for post-feed era social coordination.
+> **The Ultimate AI Video Platform** - 15+ State-of-the-Art Models, Production-Ready Infrastructure
 
-## 🌟 Overview
+🚀 **Way Better Than Higgsfield.ai** - More models, better UX, more features, fully open-source!
 
-NeuraField is a production-ready platform featuring:
+## 🎯 Features
 
-- **Flow Studio**: Complete Google Flow clone for AI video generation
-- **Personal Digital Twins (PDT)**: Privacy-first local AI filtering based on stated goals
-- **Agent Collaboration**: Autonomous agent-to-agent coordination for scheduling
-- **Generative UI**: Adaptive interfaces that morph based on conversation context
-- **Spatial Worlds**: 3D immersive environments using Gaussian Splatting
-- **Voice Translation**: Real-time multilingual translation with voice cloning
-- **ActivityPub Federation**: W3C ActivityPub for Fediverse interoperability
-- **Web of Trust**: Decentralized trust verification with C2PA and W3C credentials
+### 🎬 15+ AI Video Models
+- **Big Three**: Sora 2, Veo 3.1, Gen-4.5
+- **Chinese Powerhouses**: Kling 2.6, Kling O1, HunyuanVideo, HY-World, Wan 2.2, Hailuo 2.3
+- **Specialized**: Luma Ray 3, Pika 2.2, Mochi 1, Higgsfield, Haiper
+
+### ⚡ Production-Ready Infrastructure
+- **Real-time Job Queue** - Bull + Redis for reliable processing
+- **WebSocket Updates** - Instant notifications via Socket.io
+- **S3 Storage** - AWS S3 or compatible (Cloudflare R2, MinIO)
+- **JWT Authentication** - Secure user sessions
+- **Credit System** - Usage tracking and limits
+- **Rate Limiting** - API protection
+- **Comprehensive Logging** - Winston logger
+- **Type Safety** - Full TypeScript coverage
+- **Validation** - Zod schemas for all inputs
+
+### 🎨 Beautiful Frontend
+- **Next.js 14** - Latest App Router
+- **Glassmorphism UI** - Modern, stunning design
+- **Framer Motion** - Smooth 60fps animations
+- **React Query** - Smart data fetching + caching
+- **Zustand** - Global state management
+- **Real-time Dashboard** - Live job tracking
+- **Advanced Gallery** - Grid/List views, filters, search
+- **Model Comparison** - Detailed specs for all 15+ models
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- Node.js 20+
+- Docker & Docker Compose
+- PostgreSQL 16
+- Redis 7
 
-- Node.js 20+ 
-- PostgreSQL 16+
-- Redis 7+
-- Docker (optional)
-
-### Environment Setup
+### 1. Clone & Install
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/aziriel.git
-cd aziriel
+git clone https://github.com/yourusername/neurafield.git
+cd neurafield
 
-# Install dependencies
-npm install
+# Install server dependencies
+cd server && npm install && cd ..
 
-# Copy environment template
+# Install client dependencies
+cd client && npm install && cd ..
+```
+
+### 2. Environment Setup
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
 cp .env.example .env
-
-# Configure .env with your API keys:
-# - DATABASE_URL (PostgreSQL)
-# - REDIS_URL
-# - JWT_SECRET
-# - ANTHROPIC_API_KEY
-# - OPENAI_API_KEY
-# - ELEVENLABS_API_KEY
-# - AWS credentials for S3
-# - Stripe credentials
 ```
 
-### Database Setup
+**Required variables:**
+```env
+# Database
+DATABASE_URL=postgresql://neurafield:password@localhost:5432/neurafield
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# JWT
+JWT_SECRET=your-super-secret-key
+
+# S3 Storage
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+S3_BUCKET_NAME=neurafield-videos
+
+# AI Model Keys (at least one required)
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+RUNWAY_API_KEY=...
+# ... see .env.example for all models
+```
+
+### 3. Database Setup
 
 ```bash
-# Generate Prisma client
+cd server
+npx prisma migrate dev
 npx prisma generate
-
-# Run migrations
-npx prisma migrate deploy
-
-# Seed database (optional)
-npx prisma db seed
 ```
 
-### Development
+### 4. Run with Docker Compose (Recommended)
 
 ```bash
-# Start development server
-npm run dev
-
-# Server runs on http://localhost:3000
-```
-
-### Production
-
-```bash
-# Build TypeScript
-npm run build
-
-# Start production server
-npm start
-```
-
-### Docker Deployment
-
-```bash
-# Start full stack (app + postgres + redis + nginx)
+# Start all services (PostgreSQL, Redis, MinIO, Server, Client)
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 
-# Stop stack
+# Stop all services
 docker-compose down
 ```
 
-## 📚 API Documentation
+**Services:**
+- Frontend: http://localhost:3000
+- Backend: http://localhost:4000
+- MinIO Console: http://localhost:9001 (minioadmin / minioadmin123)
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
+
+### 5. Or Run Locally (Development)
+
+**Terminal 1 - Database & Redis:**
+```bash
+docker-compose up postgres redis minio -d
+```
+
+**Terminal 2 - Backend:**
+```bash
+cd server
+npm run dev
+```
+
+**Terminal 3 - Frontend:**
+```bash
+cd client
+npm run dev
+```
+
+## 📁 Project Structure
+
+```
+neurafield/
+├── server/                    # Backend (Node.js + Express + TypeScript)
+│   ├── controllers/          # Request handlers
+│   ├── routes/               # API routes
+│   ├── services/             # Business logic
+│   │   ├── video-generation.service.ts   # 15+ AI models
+│   │   ├── queue.service.ts              # Bull queue + workers
+│   │   └── s3.service.ts                 # S3 upload
+│   ├── middleware/           # Auth, validation, errors
+│   ├── config/               # Database, logger
+│   ├── prisma/               # Database schema
+│   └── app.ts                # Express app + Socket.io
+│
+├── client/                   # Frontend (Next.js 14 + TypeScript)
+│   ├── src/
+│   │   ├── app/             # Next.js App Router pages
+│   │   │   ├── page.tsx     # Landing page
+│   │   │   ├── studio/      # Video generation studio
+│   │   │   ├── gallery/     # User gallery
+│   │   │   ├── dashboard/   # User dashboard
+│   │   │   └── models/      # Model comparison
+│   │   ├── components/      # React components
+│   │   ├── hooks/           # React Query hooks
+│   │   ├── store/           # Zustand stores
+│   │   └── lib/             # API client, utils
+│
+├── docker-compose.yml        # Production deployment
+└── .env.example              # Environment variables template
+```
+
+## 🎬 Usage
+
+### 1. Register/Login
+```bash
+POST /api/auth/register
+{
+  "email": "user@example.com",
+  "password": "secure123",
+  "name": "John Doe"
+}
+```
+
+### 2. Generate Video
+```bash
+POST /api/generate/video
+Authorization: Bearer <token>
+{
+  "prompt": "A cinematic shot of a futuristic city at sunset",
+  "model": "sora2",
+  "duration": 10,
+  "aspectRatio": "16:9"
+}
+```
+
+### 3. Check Job Status
+```bash
+GET /api/jobs/:jobId
+Authorization: Bearer <token>
+```
+
+### 4. WebSocket Real-time Updates
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:4000', {
+  auth: { token: 'your-jwt-token' }
+});
+
+socket.on('job:processing', (data) => {
+  console.log('Job processing:', data.jobId);
+});
+
+socket.on('job:completed', (data) => {
+  console.log('Video ready!', data.outputUrl);
+});
+```
+
+## 🔧 API Endpoints
 
 ### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/me` - Get current user
 
-All protected endpoints require JWT authentication:
+### Video Generation
+- `POST /api/generate/video` - Generate video
+- `GET /api/generate/status/:jobId` - Check status
 
-```bash
-Authorization: Bearer <your_jwt_token>
-```
+### Jobs
+- `GET /api/jobs` - List user jobs (with filters)
+- `GET /api/jobs/:id` - Get specific job
+- `DELETE /api/jobs/:id` - Delete job
 
-### Flow Studio API
+### User
+- `GET /api/users/profile` - Get profile
+- `PATCH /api/users/profile` - Update profile
+- `GET /api/users/credits` - Get credits
 
-#### Text to Film
-```bash
-POST /api/flow/quick-start/text-to-film
-{
-  "userId": "uuid",
-  "prompt": "A cinematic shot of...",
-  "style": "cinematic",
-  "duration": 30,
-  "quality": "high"
-}
-```
+## 🎨 Frontend Pages
 
-#### Scene Builder
-```bash
-POST /api/flow/scene-builder/create
-{
-  "userId": "uuid",
-  "projectId": "uuid",
-  "sceneData": {
-    "description": "Opening scene...",
-    "duration": 10
-  }
-}
-```
+- **/** - Landing page with hero, features, model showcase
+- **/studio** - Video generation studio with 15+ models
+- **/gallery** - User gallery with grid/list views, filters
+- **/dashboard** - User dashboard with stats, activity feed
+- **/models** - Complete model comparison with pros/cons
 
-#### Video Extension
-```bash
-POST /api/flow/extend
-{
-  "userId": "uuid",
-  "videoId": "uuid",
-  "direction": "forward",
-  "duration": 10
-}
-```
+## 🏗️ Tech Stack
 
-### Nexus Protocol API
-
-#### Personal Digital Twin
-
-**Initialize PDT**
-```bash
-POST /api/nexus/pdt/initialize
-{
-  "userId": "uuid",
-  "initialGoals": {
-    "primary": ["Learn piano", "Get healthy"],
-    "avoid": ["Doom scrolling", "Political content"],
-    "prioritize": ["Education", "Fitness"]
-  }
-}
-```
-
-**Filter Content**
-```bash
-POST /api/nexus/pdt/filter
-{
-  "pdtId": "pdt_uuid",
-  "contentBatch": [
-    {
-      "id": "content_1",
-      "title": "10 Minute Piano Lesson",
-      "description": "Learn basic chords",
-      "contentType": "video"
-    }
-  ]
-}
-```
-
-#### Agent Collaboration
-
-**Plan Dinner**
-```bash
-POST /api/nexus/collaboration/plan-dinner
-{
-  "userId": "uuid",
-  "friendUserIds": ["friend1_uuid", "friend2_uuid"],
-  "preferredDates": ["2026-01-10", "2026-01-11"],
-  "cuisine": "Italian",
-  "budget": 100
-}
-```
-
-#### Generative UI
-
-**Generate Adaptive UI**
-```bash
-POST /api/nexus/genui/generate
-{
-  "conversationId": "conv_uuid",
-  "userId": "uuid",
-  "intent": "browse",
-  "entities": [
-    {"type": "product", "name": "Running shoes"}
-  ],
-  "history": [
-    {"role": "user", "content": "I need running shoes"}
-  ]
-}
-```
-
-#### Spatial Worlds
-
-**Generate World**
-```bash
-POST /api/nexus/spatial/generate
-{
-  "userId": "uuid",
-  "description": "A cozy coffee shop with vintage decor",
-  "theme": "vintage",
-  "maxParticipants": 20
-}
-```
-
-**Join World**
-```bash
-POST /api/nexus/spatial/:worldId/join
-{
-  "userId": "uuid",
-  "position": {"x": 0, "y": 0, "z": 0}
-}
-```
-
-#### Voice Translation
-
-**Translate Voice**
-```bash
-POST /api/nexus/translation/translate
-Content-Type: multipart/form-data
-
-{
-  "audio": <audio_file>,
-  "userId": "uuid",
-  "sourceLanguage": "en",
-  "targetLanguages": ["es", "fr", "ja"],
-  "preserveVoice": true
-}
-```
-
-#### Web of Trust
-
-**Calculate Trust Score**
-```bash
-POST /api/nexus/trust/score/:userId/calculate
-```
-
-**Issue Verifiable Credential**
-```bash
-POST /api/nexus/trust/credential/issue
-{
-  "userId": "uuid",
-  "type": "VerifiedCreator",
-  "credentialSubject": {
-    "name": "John Doe",
-    "skill": "Video Editing"
-  }
-}
-```
-
-**Create Community Note**
-```bash
-POST /api/nexus/trust/note
-{
-  "contentId": "content_uuid",
-  "authorId": "uuid",
-  "text": "This claim is misleading because...",
-  "rating": "misleading",
-  "evidence": ["https://source1.com", "https://source2.com"]
-}
-```
-
-#### ActivityPub Federation
-
-**Create Federated Post**
-```bash
-POST /api/nexus/activitypub/post
-{
-  "username": "alice",
-  "content": "Hello Fediverse!",
-  "visibility": "public"
-}
-```
-
-**Follow Remote Actor**
-```bash
-POST /api/nexus/activitypub/follow
-{
-  "username": "alice",
-  "remoteActorId": "https://mastodon.social/users/bob"
-}
-```
-
-### WebSocket Events
-
-Connect to WebSocket server:
-```javascript
-const socket = io('http://localhost:3000', {
-  auth: { token: 'your_jwt_token' }
-});
-```
-
-#### Spatial Worlds Events
-
-```javascript
-// Join world
-socket.emit('spatial:join', {
-  worldId: 'world_uuid',
-  userId: 'user_uuid',
-  position: {x: 0, y: 0, z: 0}
-});
-
-// Update position
-socket.emit('spatial:move', {
-  worldId: 'world_uuid',
-  userId: 'user_uuid',
-  position: {x: 10, y: 0, z: 5},
-  rotation: {x: 0, y: 90, z: 0}
-});
-
-// Listen for other users
-socket.on('spatial:user-moved', (data) => {
-  console.log('User moved:', data);
-});
-```
-
-#### Voice Translation Events
-
-```javascript
-// Join translation session
-socket.emit('translation:join', {
-  sessionId: 'session_uuid',
-  userId: 'user_uuid'
-});
-
-// Stream audio chunk
-socket.emit('translation:audio-chunk', {
-  sessionId: 'session_uuid',
-  userId: 'user_uuid',
-  audioChunk: audioBuffer,
-  sourceLanguage: 'en'
-});
-
-// Receive translation
-socket.on('translation:message', (data) => {
-  console.log('Translations:', data.translations);
-});
-```
-
-## 🏗️ Architecture
-
-### Tech Stack
-
-**Backend**
-- Node.js 20 + TypeScript
-- Express.js
-- Prisma ORM + PostgreSQL
-- Socket.IO (WebSockets)
-- Bull (Job Queue) + Redis
+### Backend
+- Node.js 20 + Express
+- TypeScript
+- Prisma (PostgreSQL)
+- Bull (Redis queue)
+- Socket.io (WebSocket)
+- JWT (Authentication)
+- AWS SDK v3 (S3)
+- Zod (Validation)
 - Winston (Logging)
 
-**AI Services**
-- Anthropic Claude Sonnet 3.5 (orchestration)
-- OpenAI GPT-4, Whisper, embeddings
-- ElevenLabs (voice cloning, TTS)
-- Replicate, fal.ai (video generation)
-- Meshy5 (3D generation)
+### Frontend
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+- React Query
+- Zustand
+- Socket.io-client
+- Axios
 
-**Vector Databases**
-- Chroma DB (local, on-device)
-- Pinecone (cloud backup)
-- Milvus (enterprise scale)
-
-**Security**
-- Helmet (security headers)
-- CORS
-- Rate limiting
-- JWT authentication
-- Zod validation
-
-**DevOps**
+### Infrastructure
 - Docker + Docker Compose
-- GitHub Actions (CI/CD)
-- Nginx (reverse proxy)
-- Jest (testing)
+- PostgreSQL 16
+- Redis 7
+- MinIO (S3-compatible)
+- Nginx (optional)
 
-### Directory Structure
+## 📊 Supported AI Models
 
-```
-aziriel/
-├── server/
-│   ├── index.ts                  # Main entry point
-│   ├── config/                   # Configuration
-│   │   ├── database.ts
-│   │   ├── redis.ts
-│   │   ├── aws.ts
-│   │   ├── stripe.ts
-│   │   └── logger.ts
-│   ├── middleware/               # Express middleware
-│   │   ├── auth.middleware.ts
-│   │   ├── error.middleware.ts
-│   │   ├── security.middleware.ts
-│   │   └── validation.middleware.ts
-│   ├── routes/                   # API routes
-│   │   ├── flow.routes.ts
-│   │   └── nexus/
-│   │       ├── pdt.routes.ts
-│   │       ├── collaboration.routes.ts
-│   │       ├── genui.routes.ts
-│   │       ├── spatial.routes.ts
-│   │       ├── translation.routes.ts
-│   │       ├── activitypub.routes.ts
-│   │       └── trust.routes.ts
-│   ├── services/                 # Business logic
-│   │   └── nexus/
-│   │       ├── personal-digital-twin.service.ts
-│   │       ├── agent-collaboration.service.ts
-│   │       ├── generative-ui.service.ts
-│   │       ├── spatial-worlds.service.ts
-│   │       ├── voice-translation.service.ts
-│   │       ├── activitypub.service.ts
-│   │       └── web-of-trust.service.ts
-│   ├── websocket/                # WebSocket handlers
-│   │   ├── index.ts
-│   │   └── handlers/
-│   │       ├── spatial.handler.ts
-│   │       ├── collaboration.handler.ts
-│   │       ├── genui.handler.ts
-│   │       └── translation.handler.ts
-│   ├── validators/               # Zod schemas
-│   │   ├── nexus.validators.ts
-│   │   └── flow.validators.ts
-│   └── workers/                  # Background jobs
-│       ├── index.ts
-│       └── video.worker.ts
-├── prisma/
-│   ├── schema.prisma             # Database schema
-│   ├── seed.ts                   # Seed data
-│   └── migrations/               # Database migrations
-├── .github/
-│   └── workflows/
-│       └── ci.yml                # CI/CD pipeline
-├── docker-compose.yml
-├── Dockerfile
-├── nginx.conf
-├── package.json
-├── tsconfig.json
-└── .env.example
-```
+| Model | Provider | Cost | Duration | Quality | Best For |
+|-------|----------|------|----------|---------|----------|
+| Sora 2 | OpenAI | $0.08/s | 25s | ⭐⭐⭐⭐⭐ | Social media, character-driven |
+| Veo 3.1 | Google | $0.12/s | 60s+ | ⭐⭐⭐⭐⭐ | Enterprise, long-form |
+| Gen-4.5 | Runway | $0.05/s | 10s | ⭐⭐⭐⭐⭐ | VFX, cinematic |
+| Hailuo 2.3 | MiniMax | $0.045/s | 6s | ⭐⭐⭐⭐ | Anime, high-volume |
+| HunyuanVideo | Tencent | FREE | 10s | ⭐⭐⭐⭐ | Open source, unlimited |
+| ... | ... | ... | ... | ... | ... |
 
-## 🧪 Testing
+See `/models` page for complete comparison!
+
+## 🚢 Production Deployment
+
+### Option 1: Docker Compose (Simple)
 
 ```bash
-# Run all tests
-npm test
+# 1. Configure .env for production
+cp .env.example .env
+nano .env  # Set all API keys and secrets
 
-# Run tests with coverage
-npm run test:coverage
+# 2. Build and start
+docker-compose up -d
 
-# Run specific test file
-npm test -- health.test.ts
+# 3. Run migrations
+docker-compose exec server npx prisma migrate deploy
+
+# 4. Access at http://your-domain.com:3000
 ```
 
-## 🔒 Security
+### Option 2: Individual Services
 
-- **Helmet**: Security headers and CSP
-- **CORS**: Configurable origins
-- **Rate Limiting**: 100 requests per 15 minutes (API), 5 per 15 minutes (auth)
-- **Input Validation**: Zod schemas on all endpoints
-- **JWT**: Secure token-based authentication
-- **Secrets Management**: Environment variables only
-
-## 📊 Database Schema
-
-### Core Models
-
-- **User**: Authentication, subscriptions, roles
-- **PersonalDigitalTwin**: User's local AI with goals and filtering
-- **AgentCollaboration**: Multi-agent coordination sessions
-- **GeneratedUI**: Adaptive UI components
-- **SpatialWorld**: 3D environments
-- **TranslationSession**: Multi-language voice sessions
-- **TrustScore**: User reputation scores
-- **VerifiableCredential**: W3C credentials
-- **FederatedPost**: ActivityPub posts
-
-See `prisma/schema.prisma` for full schema.
-
-## 🚢 Deployment
-
-### Environment Variables
-
-Required environment variables (see `.env.example`):
-
+**Server:**
 ```bash
+cd server
+npm run build
+npm start
+```
+
+**Client:**
+```bash
+cd client
+npm run build
+npm start
+```
+
+### Option 3: Cloud Platforms
+
+**Vercel (Frontend):**
+```bash
+cd client
+vercel deploy --prod
+```
+
+**Railway/Render (Backend):**
+- Connect GitHub repo
+- Set environment variables
+- Deploy automatically
+
+## 🔐 Security
+
+- JWT tokens with 7-day expiry
+- Bcrypt password hashing (10 rounds)
+- Rate limiting (100 req/15min general, 5 req/15min auth)
+- Input validation with Zod
+- Helmet.js security headers
+- CORS configuration
+- Environment variable secrets
+
+## 📝 Environment Variables
+
+See `.env.example` for complete list. Key variables:
+
+```env
 # Core
 NODE_ENV=production
-PORT=3000
+PORT=4000
+CLIENT_URL=https://your-domain.com
+
+# Database
 DATABASE_URL=postgresql://...
+
+# Redis
 REDIS_URL=redis://...
-JWT_SECRET=your-secret-key
 
-# AI Services
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-ELEVENLABS_API_KEY=...
+# JWT
+JWT_SECRET=<strong-random-secret>
 
-# Storage
+# S3
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_S3_BUCKET=...
+S3_BUCKET_NAME=neurafield-videos
 
-# Payments
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# Email
-SENDGRID_API_KEY=SG....
-
-# ActivityPub
-DOMAIN=yourdomain.com
+# AI Models (15+ keys)
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+# ... etc
 ```
 
-### Production Checklist
+## 🐛 Troubleshooting
 
-- [ ] Set all environment variables
-- [ ] Run database migrations
-- [ ] Configure SSL certificates
-- [ ] Set up CDN (CloudFront)
-- [ ] Configure monitoring (Sentry, Datadog)
-- [ ] Set up backups (PostgreSQL, Redis)
-- [ ] Enable rate limiting
-- [ ] Configure CORS origins
-- [ ] Set up log rotation
-- [ ] Enable Redis persistence
+**Database connection error:**
+```bash
+# Check PostgreSQL is running
+docker-compose ps postgres
 
-## 📈 Performance
+# Reset database
+docker-compose down -v
+docker-compose up -d postgres
+cd server && npx prisma migrate deploy
+```
 
-- **Horizontal Scaling**: Stateless design supports load balancing
-- **Caching**: Redis for session management and job queues
-- **CDN**: CloudFront for static assets
-- **Database**: Connection pooling, indexes on all queries
-- **WebSockets**: Socket.IO with Redis adapter for multi-instance
+**Redis connection error:**
+```bash
+# Check Redis is running
+docker-compose ps redis
+docker-compose logs redis
+```
 
-## 🤝 Contributing
+**S3 upload error:**
+- Verify AWS credentials
+- Check bucket exists and has correct permissions
+- For MinIO: ensure MINIO_ROOT_USER and MINIO_ROOT_PASSWORD are correct
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+**WebSocket not connecting:**
+- Check CORS configuration in `server/app.ts`
+- Verify CLIENT_URL environment variable
+- Check firewall/proxy settings
 
 ## 📄 License
 
-MIT License - see LICENSE file
+MIT License - See LICENSE file
+
+## 🤝 Contributing
+
+Contributions welcome! Please:
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
 ## 🙏 Acknowledgments
 
-- Anthropic for Claude AI
-- OpenAI for GPT-4 and Whisper
-- W3C for ActivityPub and Verifiable Credentials specifications
-- Google for Flow inspiration
-- The Fediverse community
-
-## 📞 Support
-
-- Documentation: https://docs.neurafield.ai
-- Issues: https://github.com/yourusername/aziriel/issues
-- Discord: https://discord.gg/neurafield
+- OpenAI (Sora 2)
+- Google DeepMind (Veo 3.1)
+- Runway (Gen-4.5)
+- All the amazing AI video generation providers
 
 ---
 
-Built with ❤️ for the post-feed era
+**Built with ❤️ to bury Higgsfield.ai forever** 💀🔥
+
+For support, open an issue on GitHub.
