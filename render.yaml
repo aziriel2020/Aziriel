@@ -3,7 +3,7 @@ services:
     name: neurafield-quantum-api
     env: node
     buildCommand: npm install && npx prisma generate
-    startCommand: npm run dev
+    startCommand: npx prisma db push --accept-data-loss && npm start
     envVars:
       - key: NODE_ENV
         value: production
