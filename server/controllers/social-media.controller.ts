@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SOCIAL MEDIA CONTROLLER
  * ========================

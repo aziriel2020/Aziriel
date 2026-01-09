@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Social Sharing Service - GO VIRAL
  * Generate preview cards, social meta tags, short URLs

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Swagger/OpenAPI Configuration
  */

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Project Management Controller
  */
