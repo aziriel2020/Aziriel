@@ -31,7 +31,8 @@ model User {
   creditTransactions    CreditTransaction[]
   webhooks              Webhook[]
   shares                Share[]
-  
+  storyboards           Storyboard[]
+
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -63,7 +64,8 @@ model Job {
   shares                Share[]
   videoViews            VideoView[]
   creditTransactions    CreditTransaction[]
-  
+  storyboardScene       StoryboardScene?
+
   createdAt             DateTime  @default(now())
   completedAt           DateTime?
   updatedAt             DateTime  @updatedAt
@@ -228,4 +230,44 @@ model Project {
   description           String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+}
+
+// STORYBOARD MODEL - LEGENDARY FEATURE
+model Storyboard {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title                 String
+  description           String?
+  totalScenes           Int
+  completedScenes       Int       @default(0)
+  status                String    // PROCESSING, COMPLETED, FAILED
+
+  globalStyle           Json?     // Color palette, cinematic style, aspect ratio
+  finalVideoUrl         String?
+
+  scenes                StoryboardScene[]
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// STORYBOARD SCENE MODEL
+model StoryboardScene {
+  id                    String    @id @default(uuid())
+  storyboardId          String
+  storyboard            Storyboard @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
+  jobId                 String    @unique
+  job                   Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  sceneIndex            Int
+  prompt                String
+  startFrameUrl         String?   // End frame from previous scene
+  status                String    // PENDING, PROCESSING, COMPLETED, FAILED
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([storyboardId, sceneIndex])
 }

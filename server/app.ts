@@ -22,6 +22,7 @@ import assetRoutes from './routes/asset.routes';
 import userRoutes from './routes/user.routes';
 import jobsRoutes from './routes/jobs.routes';
 import premiumRoutes from './routes/premium.routes';
+import storyboardRoutes from './routes/storyboard.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -119,6 +120,7 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jobs', jobsRoutes);
 app.use('/api/premium', premiumRoutes); // ALL PREMIUM FEATURES
+app.use('/api/storyboard', storyboardRoutes); // LEGENDARY STORYBOARD SYSTEM
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
