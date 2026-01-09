@@ -35,7 +35,7 @@ export class AudioGenerationService {
    */
   static async generateMusic(request: MusicGenerationRequest): Promise<AudioResponse> {
     try {
-      logger.info(\`Generating music: \${request.prompt}\`);
+      logger.info(`Generating music: \${request.prompt}`);
 
       const SUNO_API_KEY = process.env.SUNO_API_KEY;
       if (!SUNO_API_KEY) {
@@ -54,7 +54,7 @@ export class AudioGenerationService {
         },
         {
           headers: {
-            'Authorization': \`Bearer \${SUNO_API_KEY}\`,
+            'Authorization': `Bearer \${SUNO_API_KEY}`,
             'Content-Type': 'application/json',
           },
           timeout: 120000, // 2 minutes
@@ -64,7 +64,7 @@ export class AudioGenerationService {
       const audioUrl = response.data.audio_url;
 
       // Upload to S3
-      const uploaded = await S3Service.uploadFile(\`music-\${Date.now()}.mp3\`, {
+      const uploaded = await S3Service.uploadFile(`music-\${Date.now()}.mp3`, {
         fileUrl: audioUrl,
         contentType: 'audio/mpeg',
       });
@@ -76,7 +76,7 @@ export class AudioGenerationService {
       };
     } catch (error: any) {
       logger.error('Music generation failed:', error);
-      throw new Error(\`Failed to generate music: \${error.message}\`);
+      throw new Error(`Failed to generate music: \${error.message}`);
     }
   }
 
@@ -85,7 +85,7 @@ export class AudioGenerationService {
    */
   static async generateVoiceOver(request: VoiceOverRequest): Promise<AudioResponse> {
     try {
-      logger.info(\`Generating voice-over: \${request.text.substring(0, 50)}...\`);
+      logger.info(`Generating voice-over: \${request.text.substring(0, 50)}...`);
 
       const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
       if (!ELEVENLABS_API_KEY) {
@@ -103,7 +103,7 @@ export class AudioGenerationService {
 
       // Generate voice
       const response = await axios.post(
-        \`https://api.elevenlabs.io/v1/text-to-speech/\${voiceId}\`,
+        `https://api.elevenlabs.io/v1/text-to-speech/\${voiceId}`,
         {
           text: request.text,
           model_id: 'eleven_monolingual_v1',
@@ -126,7 +126,7 @@ export class AudioGenerationService {
 
       // Upload to S3
       const audioBuffer = Buffer.from(response.data);
-      const uploaded = await S3Service.uploadFile(\`voiceover-\${Date.now()}.mp3\`, {
+      const uploaded = await S3Service.uploadFile(`voiceover-\${Date.now()}.mp3`, {
         fileBuffer: audioBuffer,
         contentType: 'audio/mpeg',
       });
@@ -138,7 +138,7 @@ export class AudioGenerationService {
       };
     } catch (error: any) {
       logger.error('Voice-over generation failed:', error);
-      throw new Error(\`Failed to generate voice-over: \${error.message}\`);
+      throw new Error(`Failed to generate voice-over: \${error.message}`);
     }
   }
 
@@ -147,7 +147,7 @@ export class AudioGenerationService {
    */
   static async generateSoundEffect(prompt: string): Promise<AudioResponse> {
     try {
-      logger.info(\`Generating sound effect: \${prompt}\`);
+      logger.info(`Generating sound effect: \${prompt}`);
 
       const AUDIOGEN_API_KEY = process.env.AUDIOGEN_API_KEY;
       if (!AUDIOGEN_API_KEY) {
@@ -162,7 +162,7 @@ export class AudioGenerationService {
         },
         {
           headers: {
-            'Authorization': \`Bearer \${AUDIOGEN_API_KEY}\`,
+            'Authorization': `Bearer \${AUDIOGEN_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -170,7 +170,7 @@ export class AudioGenerationService {
 
       const audioUrl = response.data.audio_url;
 
-      const uploaded = await S3Service.uploadFile(\`sfx-\${Date.now()}.mp3\`, {
+      const uploaded = await S3Service.uploadFile(`sfx-\${Date.now()}.mp3`, {
         fileUrl: audioUrl,
         contentType: 'audio/mpeg',
       });
@@ -182,7 +182,7 @@ export class AudioGenerationService {
       };
     } catch (error: any) {
       logger.error('Sound effect generation failed:', error);
-      throw new Error(\`Failed to generate sound effect: \${error.message}\`);
+      throw new Error(`Failed to generate sound effect: \${error.message}`);
     }
   }
 

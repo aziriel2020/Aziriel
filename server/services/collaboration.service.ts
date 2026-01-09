@@ -50,7 +50,7 @@ export class CollaborationService {
       },
     });
 
-    logger.info(\`Workspace created: \${workspace.id}\`);
+    logger.info(`Workspace created: \${workspace.id}`);
     return workspace;
   }
 
@@ -78,7 +78,7 @@ export class CollaborationService {
     });
 
     // Notify user
-    io.to(\`user:\${data.userId}\`).emit('workspace:invited', {
+    io.to(`user:\${data.userId}`).emit('workspace:invited', {
       workspaceId: data.workspaceId,
       workspaceName: workspace.name,
       role: data.role,
@@ -113,7 +113,7 @@ export class CollaborationService {
       },
     });
 
-    io.to(\`user:\${userId}\`).emit('workspace:removed', { workspaceId });
+    io.to(`user:\${userId}`).emit('workspace:removed', { workspaceId });
   }
 
   /**
@@ -148,7 +148,7 @@ export class CollaborationService {
 
     workspace?.members.forEach((member) => {
       if (member.userId !== userId) {
-        io.to(\`user:\${member.userId}\`).emit('workspace:video_shared', {
+        io.to(`user:\${member.userId}`).emit('workspace:video_shared', {
           jobId,
           workspaceId,
           sharedBy: userId,
@@ -193,7 +193,7 @@ export class CollaborationService {
 
       workspace?.members.forEach((member) => {
         if (member.userId !== data.userId) {
-          io.to(\`user:\${member.userId}\`).emit('comment:new', {
+          io.to(`user:\${member.userId}`).emit('comment:new', {
             comment,
             jobId: data.jobId,
           });
@@ -264,7 +264,7 @@ export class CollaborationService {
     });
 
     if (parentComment && parentComment.userId !== userId) {
-      io.to(\`user:\${parentComment.userId}\`).emit('comment:reply', {
+      io.to(`user:\${parentComment.userId}`).emit('comment:reply', {
         reply,
         parentCommentId: commentId,
       });
@@ -371,7 +371,7 @@ export class CollaborationService {
       },
     });
 
-    io.to(\`user:\${userId}\`).emit('workspace:role_updated', {
+    io.to(`user:\${userId}`).emit('workspace:role_updated', {
       workspaceId,
       newRole,
     });

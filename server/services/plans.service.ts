@@ -189,15 +189,15 @@ export class PlansService {
             recurring: { interval: 'month' },
             unit_amount: plan.price * 100,
             product_data: {
-              name: \`NeuraField \${plan.name} Plan\`,
+              name: `NeuraField \${plan.name} Plan`,
               description: plan.features.join(', '),
             },
           },
           quantity: 1,
         },
       ],
-      success_url: \`\${process.env.CLIENT_URL}/dashboard?payment=success\`,
-      cancel_url: \`\${process.env.CLIENT_URL}/plans?payment=cancelled\`,
+      success_url: `\${process.env.CLIENT_URL}/dashboard?payment=success`,
+      cancel_url: `\${process.env.CLIENT_URL}/plans?payment=cancelled`,
       metadata: {
         userId,
         planId,
@@ -246,7 +246,7 @@ export class PlansService {
         },
       });
 
-      logger.info(\`Subscription activated for user \${userId}: \${planId}\`);
+      logger.info(`Subscription activated for user \${userId}: \${planId}`);
     }
   }
 
@@ -279,7 +279,7 @@ export class PlansService {
       },
     });
 
-    logger.info(\`Subscription cancelled for user \${userId}\`);
+    logger.info(`Subscription cancelled for user \${userId}`);
   }
 
   /**
@@ -307,15 +307,15 @@ export class PlansService {
             currency: 'usd',
             unit_amount: Math.round(totalPrice * 100),
             product_data: {
-              name: \`\${amount} Credits\`,
+              name: `\${amount} Credits`,
               description: 'NeuraField AI Credits',
             },
           },
           quantity: 1,
         },
       ],
-      success_url: \`\${process.env.CLIENT_URL}/dashboard?payment=success&credits=\${amount}\`,
-      cancel_url: \`\${process.env.CLIENT_URL}/credits?payment=cancelled\`,
+      success_url: `\${process.env.CLIENT_URL}/dashboard?payment=success&credits=\${amount}`,
+      cancel_url: `\${process.env.CLIENT_URL}/credits?payment=cancelled`,
       metadata: {
         userId,
         credits: amount.toString(),
@@ -352,11 +352,11 @@ export class PlansService {
           userId,
           amount: credits,
           type: 'purchase',
-          description: \`Purchased \${credits} credits\`,
+          description: `Purchased \${credits} credits`,
         },
       });
 
-      logger.info(\`Credits purchased for user \${userId}: \${credits}\`);
+      logger.info(`Credits purchased for user \${userId}: \${credits}`);
     }
   }
 
@@ -389,12 +389,12 @@ export class PlansService {
         userId,
         amount: -amount,
         type: 'debit',
-        description: \`Video generation (Job: \${jobId})\`,
+        description: `Video generation (Job: \${jobId})`,
         jobId,
       },
     });
 
-    logger.info(\`Credits deducted for user \${userId}: \${amount}\`);
+    logger.info(`Credits deducted for user \${userId}: \${amount}`);
   }
 
   /**

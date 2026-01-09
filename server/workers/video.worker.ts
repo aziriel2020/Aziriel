@@ -16,7 +16,7 @@ export interface VideoGenerationJob {
 }
 
 export async function processVideoGeneration(job: Job<VideoGenerationJob>) {
-  const { userId, videoId, provider, model, prompt, settings } = job.data;
+  const { videoId } = job.data;
 
   console.log(`[Worker] Processing video generation: ${videoId}`);
 
@@ -24,10 +24,10 @@ export async function processVideoGeneration(job: Job<VideoGenerationJob>) {
     // Update job status
     await job.progress(10);
 
-    // Update video status in database
-    await prisma.video.update({
+    // Update job status in database
+    await prisma.job.update({
       where: { id: videoId },
-      data: { status: 'PROCESSING', progress: 10 },
+      data: { status: 'PROCESSING' },
     });
 
     // Simulate video generation (in production, call actual AI API)
@@ -36,16 +36,14 @@ export async function processVideoGeneration(job: Job<VideoGenerationJob>) {
 
     await job.progress(90);
 
-    // Update video with result
-    await prisma.video.update({
+    // Update job with result
+    await prisma.job.update({
       where: { id: videoId },
       data: {
         status: 'COMPLETED',
-        progress: 100,
-        url: `https://cdn.neurafield.ai/videos/${videoId}.mp4`,
+        outputUrl: `https://cdn.neurafield.ai/videos/${videoId}.mp4`,
         thumbnailUrl: `https://cdn.neurafield.ai/thumbnails/${videoId}.jpg`,
-        duration: 10.5,
-        resolution: '1920x1080',
+        completedAt: new Date(),
       },
     });
 
@@ -57,8 +55,8 @@ export async function processVideoGeneration(job: Job<VideoGenerationJob>) {
   } catch (error: any) {
     console.error(`[Worker] Video generation failed: ${error.message}`);
 
-    // Update video status to failed
-    await prisma.video.update({
+    // Update job status to failed
+    await prisma.job.update({
       where: { id: videoId },
       data: { status: 'FAILED', error: error.message },
     });

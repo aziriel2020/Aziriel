@@ -102,7 +102,7 @@ export class StoryboardService {
     const storyboardId = uuidv4();
     
     try {
-      logger.info(\`Creating storyboard: \${storyboardId} with \${request.scenes.length} scenes\`);
+      logger.info(`Creating storyboard: \${storyboardId} with \${request.scenes.length} scenes`);
 
       // Create storyboard in database
       const storyboard = await prisma.storyboard.create({
@@ -125,7 +125,7 @@ export class StoryboardService {
         const scene = request.scenes[i];
         const sceneId = uuidv4();
 
-        logger.info(\`Processing scene \${i + 1}/\${request.scenes.length}\`);
+        logger.info(`Processing scene \${i + 1}/\${request.scenes.length}`);
 
         // Get previous scene's end frame if exists
         let startFrameUrl: string | undefined;
@@ -210,7 +210,7 @@ export class StoryboardService {
       }
 
       // Emit WebSocket event
-      io.to(\`user:\${request.userId}\`).emit('storyboard:created', {
+      io.to(`user:\${request.userId}`).emit('storyboard:created', {
         storyboardId,
         totalScenes: request.scenes.length,
       });
@@ -222,8 +222,8 @@ export class StoryboardService {
         scenes: sceneResults,
       };
     } catch (error: any) {
-      logger.error(\`Storyboard creation failed: \${storyboardId}\`, error);
-      throw new Error(\`Failed to create storyboard: \${error.message}\`);
+      logger.error(`Storyboard creation failed: \${storyboardId}`, error);
+      throw new Error(`Failed to create storyboard: \${error.message}`);
     }
   }
 
@@ -232,8 +232,8 @@ export class StoryboardService {
    */
   private static async extractLastFrame(videoUrl: string, sceneId: string): Promise<string> {
     const jobId = uuidv4();
-    const inputPath = path.join(TEMP_DIR, \`\${jobId}-input.mp4\`);
-    const framePath = path.join(TEMP_DIR, \`\${jobId}-last-frame.jpg\`);
+    const inputPath = path.join(TEMP_DIR, `\${jobId}-input.mp4`);
+    const framePath = path.join(TEMP_DIR, `\${jobId}-last-frame.jpg`);
 
     try {
       // Download video
@@ -270,7 +270,7 @@ export class StoryboardService {
         .toBuffer();
 
       // Upload to S3
-      const uploaded = await S3Service.uploadFile(\`start-frame-\${sceneId}.jpg\`, {
+      const uploaded = await S3Service.uploadFile(`start-frame-\${sceneId}.jpg`, {
         fileBuffer: enhancedFrame,
         contentType: 'image/jpeg',
       });
@@ -279,7 +279,7 @@ export class StoryboardService {
       await fs.unlink(inputPath).catch(() => {});
       await fs.unlink(framePath).catch(() => {});
 
-      logger.info(\`Extracted last frame for scene \${sceneId}\`);
+      logger.info(`Extracted last frame for scene \${sceneId}`);
       return uploaded.url;
     } catch (error: any) {
       logger.error('Frame extraction failed:', error);
@@ -317,7 +317,7 @@ export class StoryboardService {
       }
 
       // Upload styled frame
-      const uploaded = await S3Service.uploadFile(\`styled-frame-\${uuidv4()}.jpg\`, {
+      const uploaded = await S3Service.uploadFile(`styled-frame-\${uuidv4()}.jpg`, {
         fileBuffer: frameBuffer,
         contentType: 'image/jpeg',
       });
@@ -404,44 +404,44 @@ export class StoryboardService {
 
     // Add lighting controls
     if (scene.lighting) {
-      prompt += \`, \${scene.lighting.type} lighting\`;
+      prompt += `, \${scene.lighting.type} lighting`;
       if (scene.lighting.direction) {
-        prompt += \` from \${scene.lighting.direction}\`;
+        prompt += ` from \${scene.lighting.direction}`;
       }
     }
 
     // Add camera controls
     if (scene.camera) {
-      prompt += \`, \${scene.camera.angle} camera angle\`;
+      prompt += `, \${scene.camera.angle} camera angle`;
       if (scene.camera.movement && scene.camera.movement !== 'static') {
-        prompt += \`, \${scene.camera.movement} camera movement\`;
+        prompt += `, \${scene.camera.movement} camera movement`;
       }
     }
 
     // Add composition
     if (scene.composition) {
-      prompt += \`, \${scene.composition.framing} shot\`;
+      prompt += `, \${scene.composition.framing} shot`;
     }
 
     // Add effects
     if (scene.effects) {
       if (scene.effects.colorGrading) {
-        prompt += \`, \${scene.effects.colorGrading} color grading\`;
+        prompt += `, \${scene.effects.colorGrading} color grading`;
       }
       if (scene.effects.mood) {
-        prompt += \`, \${scene.effects.mood} mood\`;
+        prompt += `, \${scene.effects.mood} mood`;
       }
       if (scene.effects.weather) {
-        prompt += \`, \${scene.effects.weather} weather\`;
+        prompt += `, \${scene.effects.weather} weather`;
       }
       if (scene.effects.timeOfDay) {
-        prompt += \`, \${scene.effects.timeOfDay}\`;
+        prompt += `, \${scene.effects.timeOfDay}`;
       }
     }
 
     // Add global cinematic style
     if (globalStyle?.cinematicStyle) {
-      prompt += \`, \${globalStyle.cinematicStyle} cinematic style\`;
+      prompt += `, \${globalStyle.cinematicStyle} cinematic style`;
     }
 
     return prompt;
@@ -473,9 +473,9 @@ export class StoryboardService {
         },
       });
 
-      logger.info(\`Scene generation started for job \${jobId}\`);
+      logger.info(`Scene generation started for job \${jobId}`);
     } catch (error: any) {
-      logger.error(\`Scene generation failed for job \${jobId}:\`, error);
+      logger.error(`Scene generation failed for job \${jobId}:`, error);
       throw error;
     }
   }
@@ -496,7 +496,7 @@ export class StoryboardService {
       if (job?.status === 'COMPLETED') {
         return;
       } else if (job?.status === 'FAILED') {
-        throw new Error(\`Scene generation failed: \${job.error}\`);
+        throw new Error(`Scene generation failed: \${job.error}`);
       }
 
       await new Promise(resolve => setTimeout(resolve, pollInterval));
@@ -595,7 +595,7 @@ export class StoryboardService {
       // Download all videos
       const inputPaths: string[] = [];
       for (let i = 0; i < videoUrls.length; i++) {
-        const inputPath = path.join(TEMP_DIR, \`\${storyboardId}-scene-\${i}.mp4\`);
+        const inputPath = path.join(TEMP_DIR, `\${storyboardId}-scene-\${i}.mp4`);
         const response = await axios.get(videoUrls[i], { responseType: 'stream' });
         const writer = require('fs').createWriteStream(inputPath);
         response.data.pipe(writer);
@@ -607,9 +607,9 @@ export class StoryboardService {
       }
 
       // Merge videos
-      const outputPath = path.join(TEMP_DIR, \`\${storyboardId}-final.mp4\`);
-      const concatFilePath = path.join(TEMP_DIR, \`\${storyboardId}-concat.txt\`);
-      const concatContent = inputPaths.map(p => \`file '\${p}'\`).join('\\n');
+      const outputPath = path.join(TEMP_DIR, `\${storyboardId}-final.mp4`);
+      const concatFilePath = path.join(TEMP_DIR, `\${storyboardId}-concat.txt`);
+      const concatContent = inputPaths.map(p => `file '\${p}'`).join('\\n');
       await fs.writeFile(concatFilePath, concatContent);
 
       await new Promise<void>((resolve, reject) => {
@@ -624,7 +624,7 @@ export class StoryboardService {
       });
 
       // Upload final video
-      const result = await S3Service.uploadFile(\`storyboard-\${storyboardId}.mp4\`, {
+      const result = await S3Service.uploadFile(`storyboard-\${storyboardId}.mp4`, {
         localFilePath: outputPath,
         contentType: 'video/mp4',
       });
@@ -643,11 +643,11 @@ export class StoryboardService {
         await fs.unlink(path).catch(() => {});
       }
 
-      logger.info(\`Storyboard merged successfully: \${storyboardId}\`);
+      logger.info(`Storyboard merged successfully: \${storyboardId}`);
       return result.url;
     } catch (error: any) {
       logger.error('Storyboard merge failed:', error);
-      throw new Error(\`Failed to merge storyboard: \${error.message}\`);
+      throw new Error(`Failed to merge storyboard: \${error.message}`);
     }
   }
 

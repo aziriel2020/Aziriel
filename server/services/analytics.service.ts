@@ -34,7 +34,7 @@ export class AnalyticsService {
    */
   static async trackEvent(event: AnalyticsEvent): Promise<void> {
     try {
-      logger.info(\`Analytics event tracked: \${event.eventType} for user \${event.userId}\`);
+      logger.info(`Analytics event tracked: \${event.eventType} for user \${event.userId}`);
       // Track in-memory or send to analytics service
     } catch (error) {
       logger.error('Failed to track analytics event:', error);

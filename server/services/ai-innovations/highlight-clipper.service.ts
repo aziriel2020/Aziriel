@@ -92,6 +92,20 @@ export interface AudioAnalysis {
   soundEffects: number[];
 }
 
+export interface VisualAnalysis {
+  scenes: Array<{ start: number; end: number; type: string }>;
+  faces: Array<{ timestamp: number; emotion: string; confidence: number }>;
+  actions: Array<{ timestamp: number; action: string }>;
+  textOnScreen: Array<{ timestamp: number; text: string }>;
+}
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+  speaker: string;
+}
+
 export class HighlightClipperService extends EventEmitter {
   private static instance: HighlightClipperService;
 
@@ -212,26 +226,12 @@ export class HighlightClipperService extends EventEmitter {
     };
   }
 
-  interface VisualAnalysis {
-    scenes: Array<{ start: number; end: number; type: string }>;
-    faces: Array<{ timestamp: number; emotion: string; confidence: number }>;
-    actions: Array<{ timestamp: number; action: string }>;
-    textOnScreen: Array<{ timestamp: number; text: string }>;
-  }
-
   private async transcribeVideo(videoUrl: string): Promise<TranscriptSegment[]> {
     // Use Whisper for transcription with timestamps
     return [
       { start: 0, end: 5, text: 'Welcome to the stream!', speaker: 'host' },
       { start: 5, end: 10, text: 'Today we have something amazing', speaker: 'host' },
     ];
-  }
-
-  interface TranscriptSegment {
-    start: number;
-    end: number;
-    text: string;
-    speaker: string;
   }
 
   /**

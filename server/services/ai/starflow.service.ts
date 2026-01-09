@@ -159,9 +159,9 @@ export class STARFlowService {
   static getArchitectureInfo(): {
     type: string;
     howItWorks: string;
-    vsD iffusion: {
-      diffusionSteps: number;
-      flowSteps: number;
+    vsDiffusion: {
+      diffusionSteps: string;
+      flowSteps: string;
       speedup: string;
     };
     tradeoffs: string[];
@@ -170,8 +170,8 @@ export class STARFlowService {
       type: 'Normalizing Flows (Invertible Transformations)',
       howItWorks: 'Maps simple distributions (e.g., Gaussian) to complex data (video) using invertible transformations. Unlike diffusion (which iteratively removes noise), flows can generate in a single forward pass.',
       vsDiffusion: {
-        diffusionSteps: 20-50,
-        flowSteps: 1-4,
+        diffusionSteps: '20-50',
+        flowSteps: '1-4',
         speedup: '15x faster',
       },
       tradeoffs: [

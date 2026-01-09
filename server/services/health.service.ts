@@ -61,7 +61,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
 async function checkDatabase(): Promise<CheckStatus> {
   const startTime = Date.now();
   try {
-    await prisma.\$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
     return {
       status: 'pass',
       message: 'Database connected',
@@ -115,7 +115,7 @@ export function livenessProbe(): { status: 'alive' } {
 
 export async function readinessProbe(): Promise<{ status: 'ready' | 'not_ready'; reason?: string }> {
   try {
-    await prisma.\$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
     await redis.ping();
     return { status: 'ready' };
   } catch (error: any) {

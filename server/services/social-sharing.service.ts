@@ -64,7 +64,7 @@ export class SocialSharingService {
       }
 
       // Add text overlay
-      const svgText = \`
+      const svgText = `
         <svg width="\${cardWidth}" height="\${cardHeight}">
           <rect width="100%" height="100%" fill="rgba(0,0,0,0.5)"/>
           <text x="50%" y="40%" text-anchor="middle" font-family="Arial" font-size="48" font-weight="bold" fill="white">
@@ -77,7 +77,7 @@ export class SocialSharingService {
             Created with \${job.provider.toUpperCase()} • NeuraField.com
           </text>
         </svg>
-      \`;
+      `;
 
       const cardBuffer = await sharp(background)
         .resize(cardWidth, cardHeight, { fit: 'cover' })
@@ -90,7 +90,7 @@ export class SocialSharingService {
         .toBuffer();
 
       // Upload to S3
-      const uploaded = await S3Service.uploadFile(\`preview-\${jobId}.png\`, {
+      const uploaded = await S3Service.uploadFile(`preview-\${jobId}.png`, {
         fileBuffer: cardBuffer,
         contentType: 'image/png',
       });
@@ -98,7 +98,7 @@ export class SocialSharingService {
       return uploaded.url;
     } catch (error: any) {
       logger.error('Preview card generation failed:', error);
-      throw new Error(\`Failed to generate preview card: \${error.message}\`);
+      throw new Error(`Failed to generate preview card: \${error.message}`);
     }
   }
 
@@ -113,7 +113,7 @@ export class SocialSharingService {
       });
 
       if (existing) {
-        return \`https://neura.fi/\${existing.shortCode}\`;
+        return `https://neura.fi/\${existing.shortCode}`;
       }
 
       // Generate unique short code
@@ -127,10 +127,10 @@ export class SocialSharingService {
         },
       });
 
-      return \`https://neura.fi/\${shortCode}\`;
+      return `https://neura.fi/\${shortCode}`;
     } catch (error: any) {
       logger.error('Short URL generation failed:', error);
-      throw new Error(\`Failed to generate short URL: \${error.message}\`);
+      throw new Error(`Failed to generate short URL: \${error.message}`);
     }
   }
 
@@ -152,8 +152,8 @@ export class SocialSharingService {
     ]);
 
     return {
-      title: \`AI-Generated Video: \${job.prompt.substring(0, 60)}\`,
-      description: \`Created with \${job.provider.toUpperCase()} on NeuraField - The Ultimate AI Video Platform\`,
+      title: `AI-Generated Video: \${job.prompt.substring(0, 60)}`,
+      description: `Created with \${job.provider.toUpperCase()} on NeuraField - The Ultimate AI Video Platform`,
       imageUrl: previewCardUrl,
       videoUrl: job.outputUrl!,
       shareUrl,
@@ -167,31 +167,31 @@ export class SocialSharingService {
   static getShareUrl(config: ShareConfig, metadata: SocialMetadata): string {
     const { platform = 'twitter', message, hashtags } = config;
 
-    const text = message || \`Check out this AI-generated video: \${metadata.title}\`;
+    const text = message || `Check out this AI-generated video: \${metadata.title}`;
     const tags = hashtags || metadata.tags;
     const url = metadata.shareUrl;
 
     switch (platform) {
       case 'twitter':
         const twitterHashtags = tags.join(',');
-        return \`https://twitter.com/intent/tweet?text=\${encodeURIComponent(text)}&url=\${encodeURIComponent(url)}&hashtags=\${twitterHashtags}\`;
+        return `https://twitter.com/intent/tweet?text=\${encodeURIComponent(text)}&url=\${encodeURIComponent(url)}&hashtags=\${twitterHashtags}`;
 
       case 'facebook':
-        return \`https://www.facebook.com/sharer/sharer.php?u=\${encodeURIComponent(url)}\`;
+        return `https://www.facebook.com/sharer/sharer.php?u=\${encodeURIComponent(url)}`;
 
       case 'linkedin':
-        return \`https://www.linkedin.com/sharing/share-offsite/?url=\${encodeURIComponent(url)}\`;
+        return `https://www.linkedin.com/sharing/share-offsite/?url=\${encodeURIComponent(url)}`;
 
       case 'instagram':
         // Instagram doesn't support direct web sharing, return mobile deep link
-        return \`instagram://library?AssetPath=\${encodeURIComponent(metadata.videoUrl)}\`;
+        return `instagram://library?AssetPath=\${encodeURIComponent(metadata.videoUrl)}`;
 
       case 'tiktok':
         // TikTok requires mobile app
-        return \`https://www.tiktok.com/upload?url=\${encodeURIComponent(metadata.videoUrl)}\`;
+        return `https://www.tiktok.com/upload?url=\${encodeURIComponent(metadata.videoUrl)}`;
 
       case 'youtube':
-        return \`https://www.youtube.com/upload\`;
+        return `https://www.youtube.com/upload`;
 
       default:
         return url;
@@ -251,7 +251,7 @@ export class SocialSharingService {
    * Generate OG meta tags for embed
    */
   static generateOGTags(metadata: SocialMetadata): string {
-    return \`
+    return `
       <meta property="og:title" content="\${metadata.title}" />
       <meta property="og:description" content="\${metadata.description}" />
       <meta property="og:image" content="\${metadata.imageUrl}" />
@@ -263,7 +263,7 @@ export class SocialSharingService {
       <meta name="twitter:description" content="\${metadata.description}" />
       <meta name="twitter:image" content="\${metadata.imageUrl}" />
       <meta name="twitter:player" content="\${metadata.videoUrl}" />
-    \`.trim();
+    `.trim();
   }
 
   /**

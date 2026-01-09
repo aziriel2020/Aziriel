@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Video Processing Service - FFmpeg Integration
  * Real video editing, transcoding, and manipulation

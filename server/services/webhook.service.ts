@@ -29,14 +29,17 @@ export class WebhookService {
   static async sendWebhook(userId: string, event: string, data: any): Promise<void> {
     try {
       // Get user's webhook configurations
-      const webhooks = await prisma.webhook.findMany({
+      const allWebhooks = await prisma.webhook.findMany({
         where: {
           userId,
           enabled: true,
-          events: {
-            has: event,
-          },
         },
+      });
+
+      // Filter webhooks that listen to this event (events is now a comma-separated string)
+      const webhooks = allWebhooks.filter(webhook => {
+        const events = webhook.events.split(',').map(e => e.trim());
+        return events.includes(event);
       });
 
       if (webhooks.length === 0) {
@@ -52,7 +55,7 @@ export class WebhookService {
 
       // Send to all configured webhooks
       const promises = webhooks.map(webhook =>
-        this.deliverWebhook(webhook.url, payload, webhook.secret)
+        this.deliverWebhook(webhook.url, payload, webhook.secret || undefined)
       );
 
       await Promise.allSettled(promises);
@@ -83,21 +86,21 @@ export class WebhookService {
         headers['X-NeuraField-Signature'] = signature;
       }
 
-      const response = await axios.post(url, payload, {
+      await axios.post(url, payload, {
         headers,
         timeout: 5000,
         validateStatus: (status) => status >= 200 && status < 300,
       });
 
-      logger.info(\`Webhook delivered successfully to \${url}\`);
+      logger.info(`Webhook delivered successfully to \${url}`);
     } catch (error: any) {
-      logger.error(\`Webhook delivery failed to \${url}:\`, error.message);
+      logger.error(`Webhook delivery failed to \${url}:`, error.message);
 
       // Log failed delivery
       await prisma.webhookDelivery.create({
         data: {
           url,
-          payload,
+          payload: JSON.stringify(payload),
           success: false,
           error: error.message,
           responseStatus: error.response?.status,
@@ -139,7 +142,7 @@ export class WebhookService {
       data: {
         userId,
         url: config.url,
-        events: config.events,
+        events: config.events.join(','),
         secret: config.secret,
         enabled: true,
       },
