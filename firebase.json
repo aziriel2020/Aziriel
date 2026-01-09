@@ -1,34 +1,94 @@
 {
-  "functions": {
-    "source": ".",
-    "runtime": "nodejs20",
-    "predeploy": [
-      "npm install",
-      "npx prisma generate"
-    ]
-  },
+  "functions": [
+    {
+      "source": ".",
+      "codebase": "default",
+      "runtime": "nodejs20",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "client",
+        "dist",
+        "*.md",
+        "*.log"
+      ],
+      "predeploy": [
+        "npm install --omit=dev",
+        "npx prisma generate"
+      ]
+    }
+  ],
   "hosting": {
     "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "rewrites": [
       {
         "source": "/api/**",
         "function": "api"
       },
       {
+        "source": "/health",
+        "function": "api"
+      },
+      {
         "source": "**",
-        "destination": "/PREVIEW.html"
+        "destination": "/index.html"
       }
     ],
     "headers": [
       {
-        "source": "**",
+        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, max-age=31536000"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "X-XSS-Protection",
+            "value": "1; mode=block"
           }
         ]
       }
     ]
+  },
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    }
   }
 }
