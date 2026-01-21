@@ -1,0 +1,130 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // ============================================
+    // SKYWARD TRAVELS - STORAGE SECURITY RULES
+    // ============================================
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size < 10 * 1024 * 1024; // 10MB max
+    }
+
+    function isValidDocument() {
+      return request.resource.contentType.matches('application/pdf') &&
+             request.resource.size < 25 * 1024 * 1024; // 25MB max
+    }
+
+    // ============================================
+    // USER PROFILE IMAGES
+    // ============================================
+    match /users/{userId}/profile/{fileName} {
+      // Users can read their own profile images
+      allow read: if isAuthenticated();
+
+      // Users can upload their own profile images
+      allow write: if isOwner(userId) && isValidImage();
+    }
+
+    // ============================================
+    // BOOKING DOCUMENTS
+    // ============================================
+    match /bookings/{bookingId}/documents/{fileName} {
+      // Only booking owner can access
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidDocument();
+    }
+
+    // ============================================
+    // ITINERARIES
+    // ============================================
+    match /itineraries/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidDocument();
+    }
+
+    // ============================================
+    // TRAVEL DOCUMENTS (Passports, IDs, Visas)
+    // ============================================
+    match /travel-documents/{userId}/{documentId}/{fileName} {
+      // Only the document owner can access
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) &&
+        (isValidImage() || isValidDocument());
+    }
+
+    // ============================================
+    // RECEIPTS
+    // ============================================
+    match /receipts/{userId}/{receiptId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Only backend writes receipts
+    }
+
+    // ============================================
+    // PUBLIC ASSETS
+    // ============================================
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Only admin/backend
+    }
+
+    // ============================================
+    // HOTEL IMAGES (Public, Admin managed)
+    // ============================================
+    match /hotels/{hotelId}/images/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // AIRLINE LOGOS (Public, Admin managed)
+    // ============================================
+    match /airlines/{airlineCode}/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // DESTINATION IMAGES (Public, Admin managed)
+    // ============================================
+    match /destinations/{destinationId}/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // PROMOTIONAL CONTENT
+    // ============================================
+    match /promotions/{promotionId}/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // TEMP UPLOADS (Auto-cleaned)
+    // ============================================
+    match /temp/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) &&
+        request.resource.size < 50 * 1024 * 1024; // 50MB max for temp
+    }
+
+    // ============================================
+    // DENY ALL OTHER ACCESS
+    // ============================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

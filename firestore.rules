@@ -1,0 +1,243 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ============================================
+    // SKYWARD TRAVELS - FIRESTORE SECURITY RULES
+    // ============================================
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    function isValidEmail(email) {
+      return email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can create their own profile
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasAll(['email', 'createdAt']) &&
+        isValidEmail(request.resource.data.email);
+
+      // Users can update their own profile (except role)
+      allow update: if isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'createdAt']);
+
+      // Only admins can delete users
+      allow delete: if isAdmin();
+
+      // Travelers subcollection
+      match /travelers/{travelerId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Payment methods subcollection
+      match /paymentMethods/{methodId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
+      // Notifications subcollection
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // ============================================
+    // BOOKINGS COLLECTION
+    // ============================================
+    match /bookings/{bookingId} {
+      // Users can read their own bookings
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Users can create bookings
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'type', 'status', 'createdAt']);
+
+      // Users can update their own bookings (limited fields)
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt', 'cancellationReason']);
+
+      // Only admins can delete bookings
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // FLIGHT SEARCHES COLLECTION
+    // ============================================
+    match /flightSearches/{searchId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // ============================================
+    // HOTEL SEARCHES COLLECTION
+    // ============================================
+    match /hotelSearches/{searchId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // ============================================
+    // SAVED SEARCHES / WISHLISTS
+    // ============================================
+    match /savedSearches/{savedId} {
+      allow read, write: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         request.resource.data.userId == request.auth.uid);
+    }
+
+    match /wishlists/{wishlistId} {
+      allow read, write: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         request.resource.data.userId == request.auth.uid);
+    }
+
+    // ============================================
+    // PRICE ALERTS
+    // ============================================
+    match /priceAlerts/{alertId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['active', 'updatedAt', 'lastTriggered']);
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
+    // LOYALTY PROGRAM
+    // ============================================
+    match /loyaltyAccounts/{accountId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      // Only backend can modify loyalty accounts
+      allow write: if false;
+    }
+
+    match /loyaltyTransactions/{transactionId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ============================================
+    // REVIEWS
+    // ============================================
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+
+      // Authenticated users can create reviews
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+
+      // Users can update their own reviews
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['rating', 'comment', 'updatedAt']);
+
+      // Users can delete their own reviews
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
+    // SUPPORT TICKETS
+    // ============================================
+    match /supportTickets/{ticketId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ============================================
+    // AI CONVERSATIONS
+    // ============================================
+    match /aiConversations/{conversationId} {
+      allow read, write: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         request.resource.data.userId == request.auth.uid);
+    }
+
+    // ============================================
+    // PUBLIC DATA (Read-only)
+    // ============================================
+    match /airports/{airportId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /airlines/{airlineId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /destinations/{destinationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /promotions/{promotionId} {
+      allow read: if resource.data.active == true &&
+        resource.data.startDate <= request.time &&
+        resource.data.endDate >= request.time;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // ANALYTICS (Admin only)
+    // ============================================
+    match /analytics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only backend writes
+    }
+
+    // ============================================
+    // DENY ALL OTHER ACCESS
+    // ============================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

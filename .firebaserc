@@ -1,7 +1,18 @@
 {
   "projects": {
-    "default": "neurafield-quantum"
+    "default": "skyward-travels",
+    "production": "skyward-travels-prod",
+    "staging": "skyward-travels-staging",
+    "development": "skyward-travels-dev"
   },
-  "targets": {},
+  "targets": {
+    "skyward-travels": {
+      "hosting": {
+        "app": [
+          "skyward-travels"
+        ]
+      }
+    }
+  },
   "etags": {}
 }
