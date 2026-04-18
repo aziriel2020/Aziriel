@@ -1,136 +1,264 @@
-# 🚀 ONE-CLICK DEPLOYMENT
+# SKYWARD TRAVELS - Firebase Deployment Guide
 
-## ⚡ **INSTANT DEPLOY (Choose One)**
+## Prerequisites
 
-### Option 1: Railway (RECOMMENDED - Full Stack)
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https://github.com/aziriel2020/Aziriel/tree/claude/neurafield-quantum-platform-bf4VV)
+Before deploying, ensure you have:
 
-**Includes:**
-- ✅ Automatic PostgreSQL database
-- ✅ Automatic Redis instance
-- ✅ Environment variables auto-configured
-- ✅ HTTPS + Custom domain support
-
-**Steps:**
-1. Click the button above
-2. Sign in with GitHub
-3. Click "Deploy Now"
-4. Wait 2-3 minutes
-5. Your app is LIVE! 🎉
+1. **Node.js 20+** installed
+2. **Firebase CLI** installed: `npm install -g firebase-tools`
+3. **Firebase Project** created at [console.firebase.google.com](https://console.firebase.google.com)
+4. **API Keys** for travel services (Amadeus, Duffel, Hotelbeds)
 
 ---
 
-### Option 2: Render.com (Easy Setup)
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/aziriel2020/Aziriel/tree/claude/neurafield-quantum-platform-bf4VV)
+## Quick Start Deployment
 
-**Includes:**
-- ✅ PostgreSQL database
-- ✅ Redis instance
-- ✅ Free SSL certificate
-- ✅ Auto-deploy on git push
-
-**Steps:**
-1. Click the button above
-2. Sign in with GitHub
-3. Click "Apply"
-4. Wait 3-5 minutes
-5. Access your app! 🚀
-
----
-
-### Option 3: Vercel (Frontend Only - Fast)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aziriel2020/Aziriel/tree/claude/neurafield-quantum-platform-bf4VV)
-
-**Steps:**
-1. Click the button above
-2. Sign in with GitHub
-3. Click "Deploy"
-4. Backend needs separate deployment (use Railway/Render)
-
----
-
-## 🌐 **MANUAL DEPLOYMENT**
-
-If you prefer manual setup:
+### Step 1: Firebase Setup
 
 ```bash
-# Clone the repo
-git clone -b claude/neurafield-quantum-platform-bf4VV https://github.com/aziriel2020/Aziriel.git
-cd Aziriel
+# Login to Firebase
+firebase login
 
-# Install dependencies
-npm install
-
-# Set up database
-npx prisma generate
-npx prisma db push
-
-# Start the server
-npm run dev
+# Initialize project (select your Firebase project)
+firebase use your-project-id
 ```
 
-Then expose online with:
+### Step 2: Environment Configuration
+
 ```bash
-# Install ngrok
-npm install -g ngrok
+# Copy environment template
+cp .env.example .env
 
-# Expose your app
-ngrok http 4000
+# Edit with your actual values
+nano .env
 ```
 
----
-
-## 🎯 **PREVIEW URLS**
-
-**Static Showcase (Already Live):**
-- https://htmlpreview.github.io/?https://github.com/aziriel2020/Aziriel/blob/claude/neurafield-quantum-platform-bf4VV/PREVIEW.html
-
-**GitHub Repository:**
-- https://github.com/aziriel2020/Aziriel/tree/claude/neurafield-quantum-platform-bf4VV
-
----
-
-## 📦 **What's Included**
-
-✅ **15+ AI Video Models** (Sora 2, Veo 3.1, Gen-4.5, Kling, etc.)
-✅ **LEGENDARY Storyboard System** (frame-to-frame continuity)
-✅ **Video Editing** (trim, merge, effects, watermarks)
-✅ **Batch Generation** (100 videos at once)
-✅ **AI Audio** (Suno, ElevenLabs, AudioGen)
-✅ **Social Sharing** (viral optimization)
-✅ **Team Collaboration** (workspaces, comments)
-✅ **Stripe Payments** (4 subscription tiers)
-✅ **40+ API Endpoints**
-✅ **WebSocket Real-time Updates**
-✅ **Queue System** (Bull + Redis)
-
----
-
-## 🔧 **Environment Variables**
-
-The deployment will prompt you for these (or use defaults):
+**Required Environment Variables:**
 
 ```env
-DATABASE_URL=postgresql://...
-REDIS_URL=redis://...
-JWT_SECRET=your-secret-key
-CLIENT_URL=https://your-frontend-url.com
+# Firebase (from Firebase Console > Project Settings)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 
-# Optional AI API Keys
-OPENAI_API_KEY=sk-...
-GOOGLE_AI_API_KEY=...
-RUNWAY_API_KEY=...
+# Travel APIs
+AMADEUS_CLIENT_ID=your_amadeus_client_id
+AMADEUS_CLIENT_SECRET=your_amadeus_client_secret
+HOTELBEDS_API_KEY=your_hotelbeds_key
+HOTELBEDS_SECRET=your_hotelbeds_secret
+DUFFEL_ACCESS_TOKEN=your_duffel_token
+
+# Payments
+STRIPE_SECRET_KEY=sk_live_xxx
+STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# AI
+OPENAI_API_KEY=sk-xxx
+ANTHROPIC_API_KEY=sk-ant-xxx
+```
+
+### Step 3: Install Dependencies
+
+```bash
+# Install root dependencies
+npm install
+
+# Install client dependencies
+npm --prefix client install
+
+# Install functions dependencies
+npm --prefix functions install
+```
+
+### Step 4: Build & Deploy
+
+```bash
+# Full deployment (hosting + functions + rules)
+npm run firebase:deploy:all
+
+# Or deploy individually:
+npm run firebase:deploy:hosting    # Next.js frontend only
+npm run firebase:deploy:functions  # Cloud Functions API only
+npm run firebase:deploy:rules      # Firestore & Storage rules
 ```
 
 ---
 
-## 💡 **Need Help?**
+## Deployment Commands
 
-- 📚 Full documentation: [README.md](./README.md)
-- 🐛 Report issues: [GitHub Issues](https://github.com/aziriel2020/Aziriel/issues)
-- 📖 Deployment guide: [DEPLOY_ONLINE.md](./DEPLOY_ONLINE.md)
+| Command | Description |
+|---------|-------------|
+| `npm run firebase:deploy` | Full deployment (build + deploy all) |
+| `npm run firebase:deploy:all` | Deploy hosting, functions, firestore, storage |
+| `npm run firebase:deploy:hosting` | Deploy Next.js frontend only |
+| `npm run firebase:deploy:functions` | Deploy Cloud Functions only |
+| `npm run firebase:deploy:rules` | Deploy security rules only |
+| `npm run firebase:deploy:indexes` | Deploy Firestore indexes |
+| `npm run firebase:preview` | Create preview channel (7 days) |
+| `npm run deploy:staging` | Deploy to staging environment |
+| `npm run deploy:production` | Deploy to production environment |
 
 ---
 
-**Built with 1000000% intensity! 🔥💎**
-**LET'S DOMINATE THE INDUSTRY! 🚀**
+## Local Development
+
+### Start Emulators
+
+```bash
+# Start all Firebase emulators
+npm run firebase:emulators
+
+# Start with UI and data persistence
+npm run firebase:emulators:ui
+```
+
+**Emulator Ports:**
+- Auth: `localhost:9099`
+- Functions: `localhost:5001`
+- Firestore: `localhost:8080`
+- Hosting: `localhost:5000`
+- Storage: `localhost:9199`
+- Emulator UI: `localhost:4000`
+
+### Run Development Server
+
+```bash
+# Start both client and server
+npm run dev
+
+# Or separately:
+npm run dev:client  # Next.js frontend (port 3000)
+npm run dev:server  # Express backend (port 3001)
+```
+
+---
+
+## Project Structure
+
+```
+/
+├── client/                 # Next.js frontend
+│   ├── src/app/           # App router pages
+│   └── public/            # Static assets
+├── functions/             # Firebase Cloud Functions
+│   └── src/index.ts       # API endpoints
+├── prisma/                # Database schema
+├── server/                # Local development server
+├── firebase.json          # Firebase configuration
+├── firestore.rules        # Firestore security rules
+├── firestore.indexes.json # Firestore indexes
+├── storage.rules          # Storage security rules
+└── .firebaserc           # Firebase project aliases
+```
+
+---
+
+## Environment-Specific Deployment
+
+### Staging
+
+```bash
+# Switch to staging project
+firebase use staging
+
+# Deploy
+npm run firebase:deploy
+```
+
+### Production
+
+```bash
+# Switch to production project
+firebase use production
+
+# Deploy with production env
+npm run deploy:production
+```
+
+---
+
+## Setting Up API Keys
+
+### Amadeus GDS (Flight Search)
+
+1. Go to [developers.amadeus.com](https://developers.amadeus.com)
+2. Create an account and app
+3. Get API Key and Secret
+4. Use `test` environment for development
+
+### Duffel API (Flight Booking)
+
+1. Go to [duffel.com/docs](https://duffel.com/docs)
+2. Sign up for developer access
+3. Get your access token
+4. Use `sandbox` environment for testing
+
+### Hotelbeds API (Hotels)
+
+1. Go to [developer.hotelbeds.com](https://developer.hotelbeds.com)
+2. Register for API access
+3. Get API Key and Secret
+4. Use `test` environment for development
+
+### Stripe (Payments)
+
+1. Go to [dashboard.stripe.com](https://dashboard.stripe.com)
+2. Get your API keys (test mode first)
+3. Set up webhook endpoint: `https://your-domain.com/api/payments/webhook`
+
+---
+
+## Troubleshooting
+
+### Functions Not Deploying
+
+```bash
+# Clear functions build
+rm -rf functions/lib
+
+# Rebuild and deploy
+npm --prefix functions run build
+firebase deploy --only functions
+```
+
+### Hosting Build Fails
+
+```bash
+# Clear Next.js cache
+rm -rf client/.next
+
+# Rebuild
+npm run build:client
+```
+
+### Firestore Rules Rejected
+
+```bash
+# Test rules locally first
+firebase emulators:start --only firestore
+```
+
+---
+
+## Production Checklist
+
+- [ ] All environment variables set in Firebase Console
+- [ ] Custom domain configured
+- [ ] SSL certificate active
+- [ ] Stripe webhook configured for production URL
+- [ ] Travel APIs switched from test to production
+- [ ] Firestore security rules reviewed
+- [ ] Storage rules reviewed
+- [ ] Rate limiting configured
+- [ ] Error monitoring (Sentry) connected
+- [ ] Analytics enabled
+
+---
+
+## Support
+
+- Documentation: See `FEATURES.md` for complete feature list
+- Issues: Report on GitHub
+- APIs: Refer to individual provider documentation

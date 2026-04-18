@@ -1,127 +1,145 @@
 /**
- * NEURAFIELD QUANTUM - MAIN SERVER
+ * SKYWARD TRAVELS - MAIN SERVER
  *
  * Complete production server with:
- * - Express REST API
- * - WebSocket for real-time
- * - All Nexus services
+ * - Express REST API for flights, hotels, AI
+ * - Stripe payment processing
+ * - WebSocket for real-time updates
  * - Security middleware
  * - Error handling
  */
 
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
 import { config } from 'dotenv';
-import setupWebSocket from './websocket';
-
-// Middleware
-import { helmetConfig, corsConfig, apiLimiter, requestLogger, sanitizeInput } from './middleware/security.middleware';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 
 // Routes
-import flowRoutes from './routes/flow.routes';
-import nexusRoutes from './routes/nexus';
-import activitypubRoutes from './routes/nexus/activitypub.routes';
-
-// Services
-import { performHealthCheck, livenessProbe, readinessProbe } from './services/health.service';
+import apiRoutes from './src/routes';
 
 // Load environment variables
 config();
 
 const app: Application = express();
 const httpServer = createServer(app);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // ============================================================================
 // MIDDLEWARE
 // ============================================================================
 
-// Security
-app.use(helmetConfig);
-app.use(corsConfig);
-app.use(apiLimiter);
-app.use(requestLogger);
-app.use(sanitizeInput);
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+// CORS
+app.use(cors({
+  origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Compression
+app.use(compression());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', limiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request logging
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+  });
+  next();
+});
+
 // ============================================================================
 // ROUTES
 // ============================================================================
 
-// Health check (comprehensive)
-app.get('/health', async (req, res) => {
-  try {
-    const healthStatus = await performHealthCheck();
-
-    const statusCode = healthStatus.status === 'healthy' ? 200 :
-                      healthStatus.status === 'degraded' ? 200 :
-                      503;
-
-    res.status(statusCode).json(healthStatus);
-  } catch (error: any) {
-    res.status(503).json({
-      status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString(),
-    });
-  }
+// Health check
+app.get('/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'skyward-travels-api',
+    version: '1.0.0',
+    uptime: process.uptime()
+  });
 });
 
 // Liveness probe (Kubernetes)
-app.get('/health/live', (req, res) => {
-  res.json(livenessProbe());
+app.get('/health/live', (req: Request, res: Response) => {
+  res.json({ status: 'alive', timestamp: new Date().toISOString() });
 });
 
 // Readiness probe (Kubernetes)
-app.get('/health/ready', async (req, res) => {
-  try {
-    const readiness = await readinessProbe();
-    const statusCode = readiness.status === 'ready' ? 200 : 503;
-    res.status(statusCode).json(readiness);
-  } catch (error: any) {
-    res.status(503).json({
-      status: 'not_ready',
-      reason: error.message,
-    });
-  }
+app.get('/health/ready', (req: Request, res: Response) => {
+  res.json({ status: 'ready', timestamp: new Date().toISOString() });
 });
 
-// ActivityPub Federation (must be at root level for WebFinger)
-app.use('/', activitypubRoutes);
-
 // API Routes
-app.use('/api/flow', flowRoutes);
-app.use('/api/nexus', nexusRoutes);
+app.use('/api', apiRoutes);
 
 // API Documentation
-app.get('/api', (req, res) => {
+app.get('/api', (req: Request, res: Response) => {
   res.json({
-    name: 'Neurafield Quantum API',
+    name: 'Skyward Travels API',
     version: '1.0.0',
-    description: 'AI-powered video generation and social platform',
+    description: 'Hotel + Flight booking platform API',
     endpoints: {
       health: '/health',
-      flow: '/api/flow',
-      nexus: {
-        pdt: '/api/nexus/pdt',
-        collaboration: '/api/nexus/collaboration',
-        genui: '/api/nexus/genui',
-        spatial: '/api/nexus/spatial',
-        activitypub: '/api/nexus/activitypub',
-        translation: '/api/nexus/translation',
-        trust: '/api/nexus/trust',
+      flights: {
+        search: 'POST /api/flights/search',
+        book: 'POST /api/flights/book',
+        getOffer: 'GET /api/flights/offer/:offerId',
+        bookings: 'GET /api/flights/bookings/:userId'
       },
-      activitypub: {
-        webfinger: '/.well-known/webfinger',
-        actor: '/users/:username',
-        inbox: '/users/:username/inbox',
+      hotels: {
+        search: 'POST /api/hotels/search',
+        book: 'POST /api/hotels/book',
+        details: 'GET /api/hotels/:hotelCode',
+        bookings: 'GET /api/hotels/bookings/:userId'
       },
+      ai: {
+        chat: 'POST /api/ai/chat',
+        search: 'POST /api/ai/search',
+        itinerary: 'POST /api/ai/itinerary'
+      },
+      payments: {
+        createIntent: 'POST /api/payments/create-intent',
+        webhook: 'POST /api/payments/webhook',
+        history: 'GET /api/payments/history/:userId'
+      },
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        logout: 'POST /api/auth/logout',
+        profile: 'GET /api/auth/profile'
+      },
+      loyalty: {
+        account: 'GET /api/loyalty/:userId',
+        transactions: 'GET /api/loyalty/:userId/transactions',
+        redeem: 'POST /api/loyalty/:userId/redeem'
+      }
     },
-    documentation: '/api/docs',
+    documentation: '/api/docs'
   });
 });
 
@@ -129,14 +147,24 @@ app.get('/api', (req, res) => {
 // ERROR HANDLING
 // ============================================================================
 
-app.use(notFoundHandler);
-app.use(errorHandler);
+// 404 handler
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.path} not found`,
+    timestamp: new Date().toISOString()
+  });
+});
 
-// ============================================================================
-// WEBSOCKET
-// ============================================================================
-
-const io = setupWebSocket(httpServer);
+// Error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // ============================================================================
 // START SERVER
@@ -146,10 +174,10 @@ httpServer.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║              🌌 NEURAFIELD QUANTUM PLATFORM 🌌              ║
+║              ✈️  SKYWARD TRAVELS API SERVER  ✈️             ║
 ║                                                               ║
-║  Revolutionary AI-Powered Social & Video Platform             ║
-║  Post-Feed Era Architecture Worth Billions                    ║
+║  Hotel + Flight Booking Platform                              ║
+║  Powered by Amadeus, Duffel, Hotelbeds                        ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
@@ -160,25 +188,24 @@ httpServer.listen(PORT, () => {
    → Health: http://localhost:${PORT}/health
    → API: http://localhost:${PORT}/api
 
-🎯 Features Enabled:
-   ✅ Flow Studio (Google Flow Clone)
-   ✅ Personal Digital Twins (Privacy-First AI)
-   ✅ Agent Collaboration (Frictionless Coordination)
-   ✅ Generative UI (Adaptive Interfaces)
-   ✅ Spatial Worlds (3D Immersive Environments)
-   ✅ ActivityPub Federation (Fediverse Interop)
-   ✅ Real-time Voice Translation
-   ✅ Web of Trust Verification
+🎯 API Endpoints:
+   ✅ Flights - Search, Book, Manage
+   ✅ Hotels - Search, Book, Details
+   ✅ AI Assistant - Travel recommendations
+   ✅ Payments - Stripe integration
+   ✅ Auth - User management
+   ✅ Loyalty - Points & rewards
 
-🔌 Services:
-   → WebSocket: Active on all namespaces
-   → Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}
-   → Redis: ${process.env.REDIS_URL ? 'Connected' : 'Not configured'}
-   → AI: ${process.env.ANTHROPIC_API_KEY && process.env.OPENAI_API_KEY ? 'Configured' : 'Not configured'}
+🔌 Integrations:
+   → Amadeus GDS: ${process.env.AMADEUS_CLIENT_ID ? 'Configured' : 'Not configured'}
+   → Duffel API: ${process.env.DUFFEL_ACCESS_TOKEN ? 'Configured' : 'Not configured'}
+   → Hotelbeds: ${process.env.HOTELBEDS_API_KEY ? 'Configured' : 'Not configured'}
+   → Stripe: ${process.env.STRIPE_SECRET_KEY ? 'Configured' : 'Not configured'}
+   → OpenAI: ${process.env.OPENAI_API_KEY ? 'Configured' : 'Not configured'}
 
 📚 API Documentation: http://localhost:${PORT}/api
 
-Ready to change the world! 🌍
+Ready for takeoff! ✈️
   `);
 });
 
